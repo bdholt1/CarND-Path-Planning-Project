@@ -5,8 +5,9 @@
 #include <iostream>
 #include <thread>
 #include <vector>
-#include "Eigen-3.3/Eigen/Core"
-#include "Eigen-3.3/Eigen/QR"
+
+
+#include "trajectory.h"
 #include "json.hpp"
 #include "spline.h"
 
@@ -241,6 +242,8 @@ int main() {
             double end_path_d = j[1]["end_path_d"];
             vector<vector<double>> sensor_fusion = j[1]["sensor_fusion"];
 
+
+
             double ref_vel = 49.5; //mph
 
             int prev_size = previous_path_x.size();
@@ -250,7 +253,7 @@ int main() {
             double ref_y = car_y;
             double ref_yaw = deg2rad(car_yaw);
 
-            /*
+
             if(prev_size < 2)
             {
                 next_wp = NextWaypoint(ref_x, ref_y, ref_yaw, map_waypoints_x,map_waypoints_y,map_waypoints_dx,map_waypoints_dy);
@@ -268,46 +271,6 @@ int main() {
 
                 car_speed = (sqrt((ref_x-ref_x_prev)*(ref_x-ref_x_prev)+(ref_y-ref_y_prev)*(ref_y-ref_y_prev))/.02)*2.237;
             }
-
-            //find ref_v to use
-            double closestDist_s = 100000;
-            bool change_lanes = false;
-            for(int i = 0; i < sensor_fusion.size(); i++)
-            {
-                //car is in my lane
-                float d = sensor_fusion[i][6];
-                if(d < (2+4*lane+2) && d > (2+4*lane-2) )
-                {
-                    double vx = sensor_fusion[i][3];
-                    double vy = sensor_fusion[i][4];
-                    double check_speed = sqrt(vx*vx+vy*vy);
-                    double check_car_s = sensor_fusion[i][5];
-                    check_car_s+=((double)prev_size*.02*check_speed);
-                    //check s values greater than mine and s gap
-                    if((check_car_s > car_s) && ((check_car_s-car_s) < 30) && ((check_car_s-car_s) < closestDist_s ) )
-                    {
-
-                        closestDist_s = (check_car_s - car_s);
-
-                        if((check_car_s-car_s) > 20)
-                        {
-
-                            //match that cars speed
-                            ref_vel = check_speed*2.237;
-                            change_lanes = true;
-                        }
-                        else
-                        {
-                            //go slightly slower than the cars speed
-                            ref_vel = check_speed*2.237-5;
-                            change_lanes = true;
-
-                        }
-                    }
-
-
-                }
-            }*/
 
 
             vector<double> ptsx;
@@ -331,6 +294,14 @@ int main() {
 
               ptsy.push_back(previous_path_y[prev_size-2]);
               ptsy.push_back(previous_path_y[prev_size-1]);
+
+              ref_x = previous_path_x[prev_size-1];
+              double ref_x_prev = previous_path_x[prev_size-2];
+              ref_y = previous_path_y[prev_size-1];
+              double ref_y_prev = previous_path_y[prev_size-2];
+              ref_yaw = atan2(ref_y-ref_y_prev,ref_x-ref_x_prev);
+
+              car_speed = (sqrt((ref_x-ref_x_prev)*(ref_x-ref_x_prev)+(ref_y-ref_y_prev)*(ref_y-ref_y_prev))/.02)*2.237;
             }
 
             vector<double> next_wp0 = getXY(car_s + 30, 2 + 4*lane, map_waypoints_s,
