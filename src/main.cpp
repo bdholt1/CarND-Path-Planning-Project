@@ -10,6 +10,7 @@
 #include "trajectory.h"
 #include "json.hpp"
 #include "spline.h"
+#include "road.h"
 
 using namespace std;
 
@@ -242,9 +243,27 @@ int main() {
             double end_path_d = j[1]["end_path_d"];
             vector<vector<double>> sensor_fusion = j[1]["sensor_fusion"];
 
-
-
+            const int num_lanes = 3;
             double ref_vel = 49.5; //mph
+            double SPEED_LIMIT = ref_vel * 0.447;
+
+            Road road(SPEED_LIMIT, num_lanes);
+
+            road.populate_traffic(sensor_fusion);
+
+            int goal_s = car_s + 1000; // goal is moving, always 1000m away from current
+            int goal_lane = 0;
+
+            //configuration data: speed limit, num_lanes, goal_s, goal_lane, max_acceleration
+            const double MAX_ACCEL = 2.0;
+            vector<int> ego_config = {SPEED_LIMIT,num_lanes,goal_s,goal_lane,MAX_ACCEL};
+
+            road.add_ego(lane, car_s, ego_config);
+            road.advance();
+            road.display(0);
+
+            Vehicle ego = road.get_ego();
+
 
             int prev_size = previous_path_x.size();
 
