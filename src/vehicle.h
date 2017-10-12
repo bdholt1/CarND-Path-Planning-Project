@@ -40,7 +40,7 @@ public:
 
   int L = 1;
 
-  int preferred_buffer = 6; // impacts "keep lane" behavior.
+  int preferred_buffer = 50; // impacts "keep lane" behavior.
 
   int lane;
 
@@ -102,7 +102,7 @@ public:
 
 private:
   string _get_next_state(map<int,vector < vector<int> > > predictions);
-  vector< Snapshot > _trajectory_for_state(string state, map<int,vector < vector<int> > > predictions, int horizon=5);
+  vector< Snapshot > _trajectory_for_state(string state, map<int,vector < vector<int> > > predictions, int horizon=10);
   Snapshot _snapshot() const;
   void _restore_state_from_snapshot(const Snapshot& snapshot);
   double _calculate_cost(vector< Vehicle::Snapshot >& trajectory, map<int,vector < vector<int> > > predictions);

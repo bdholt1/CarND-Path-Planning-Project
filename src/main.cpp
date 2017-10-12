@@ -245,25 +245,26 @@ int main() {
 
             const int num_lanes = 3;
             double ref_vel = 49.5; //mph
-            double SPEED_LIMIT = ref_vel * 0.447;
+            int SPEED_LIMIT = int(ref_vel); // * 0.447);
 
             Road road(SPEED_LIMIT, num_lanes);
 
             road.populate_traffic(sensor_fusion);
 
             int goal_s = car_s + 1000; // goal is moving, always 1000m away from current
-            int goal_lane = 0;
+            int goal_lane = 1;
 
             //configuration data: speed limit, num_lanes, goal_s, goal_lane, max_acceleration
-            const double MAX_ACCEL = 2.0;
-            vector<int> ego_config = {SPEED_LIMIT,num_lanes,goal_s,goal_lane,MAX_ACCEL};
+            const int MAX_ACCEL = 2.0;
+            vector<int> ego_config = {SPEED_LIMIT, num_lanes, goal_s, goal_lane, MAX_ACCEL};
 
             road.add_ego(lane, car_s, ego_config);
+            //road.display(0);
             road.advance();
-            road.display(0);
-
             Vehicle ego = road.get_ego();
-
+            lane = ego.lane;
+            ref_vel = ego.v * 24;
+            cout << "New settings from FSM: lane =" << lane << " speed=" << car_speed << endl;
 
             int prev_size = previous_path_x.size();
 
@@ -285,8 +286,6 @@ int main() {
                 double ref_y_prev = previous_path_y[prev_size-2];
                 ref_yaw = atan2(ref_y-ref_y_prev,ref_x-ref_x_prev);
                 next_wp = NextWaypoint(ref_x,ref_y,ref_yaw,map_waypoints_x,map_waypoints_y,map_waypoints_dx,map_waypoints_dy);
-
-                car_s = end_path_s;
 
                 car_speed = (sqrt((ref_x-ref_x_prev)*(ref_x-ref_x_prev)+(ref_y-ref_y_prev)*(ref_y-ref_y_prev))/.02)*2.237;
             }

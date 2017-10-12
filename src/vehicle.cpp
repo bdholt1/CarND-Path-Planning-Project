@@ -69,12 +69,12 @@ string Vehicle::_get_next_state(map<int,vector < vector<int> > > predictions)
   vector<string> states = {"KL", "LCL", "LCR"};
   if  (lane == 0)
   {
-    auto itr = std::find(states.begin(), states.end(), string("LCR"));
+    auto itr = std::find(states.begin(), states.end(), string("LCL"));
     if (itr != states.end()) states.erase(itr);
   }
   if (lane == lanes_available -1)
   {
-    auto itr = std::find(states.begin(), states.end(), string("LCL"));
+    auto itr = std::find(states.begin(), states.end(), string("LCR"));
     if (itr != states.end()) states.erase(itr);
   }
 
@@ -85,7 +85,7 @@ string Vehicle::_get_next_state(map<int,vector < vector<int> > > predictions)
     map<int,vector < vector<int> > > predictions_copy(predictions);
     vector< Snapshot > trajectory = _trajectory_for_state(state, predictions_copy);
     double cost = _calculate_cost(trajectory, predictions);
-    //cout << "cost for state " << state << " = " << cost << endl;
+    cout << "cost for state " << state << " = " << cost << endl;
     costs.push_back(make_pair(state, cost));
   }
 
@@ -211,6 +211,7 @@ Vehicle::collider Vehicle::will_collide_with(Vehicle other, int timesteps)
     {
       collider_temp.collision = true;
       collider_temp.time = t;
+      cout << "Collision detected with vehicle " << endl;
       return collider_temp;
     }
   }
@@ -305,10 +306,10 @@ void Vehicle::realize_keep_lane(map<int,vector< vector<int> > > predictions)
 
 void Vehicle::realize_lane_change(map<int,vector< vector<int> > > predictions, string direction)
 {
-  int delta = -1;
+  int delta = 1;
   if (direction.compare("L") == 0)
   {
-    delta = 1;
+    delta = -1;
   }
   this->lane += delta;
   int lane = this->lane;
@@ -318,10 +319,10 @@ void Vehicle::realize_lane_change(map<int,vector< vector<int> > > predictions, s
 
 void Vehicle::realize_prep_lane_change(map<int,vector<vector<int> > > predictions, string direction)
 {
-  int delta = -1;
+  int delta = 1;
   if (direction.compare("L") == 0)
   {
-    delta = 1;
+    delta = -1;
   }
   int lane = this->lane + delta;
 

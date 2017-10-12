@@ -83,14 +83,16 @@ void Road::populate_traffic(vector<vector<double>> sensor_fusion)
     double vy = v[4];
     int s = int(v[5]);
     int d = int(v[6]);
-    int l = (d - 2) / 4;
+    int l = d / 4;
     double lane_speed = sqrt(vx*vx + vy*vy);
+    //cout << "Vehicle " << id << ": s=" << s << " d=" << d <<" lane=" << l << endl;
 
     Vehicle vehicle = Vehicle(l, s, lane_speed, 0);
     vehicle.state = "CS";
     this->vehicles_added += 1;
     this->vehicles.insert(std::pair<int,Vehicle>(id, vehicle));
   }
+  //cout << endl;
 
 }
 
@@ -102,7 +104,7 @@ void Road::advance() {
     while(it != this->vehicles.end())
     {
         int v_id = it->first;
-        vector<vector<int> > preds = it->second.generate_predictions(10);
+        vector<vector<int> > preds = it->second.generate_predictions(50);
         predictions[v_id] = preds;
         it++;
     }
@@ -188,7 +190,7 @@ void Road::display(int timestep) {
             stringstream buffer;
             stringstream dis;
             dis << i;
-            for(int buffer_i = dis.str().length(); buffer_i < 3; buffer_i++)
+            for(int buffer_i = dis.str().length(); buffer_i < 4; buffer_i++)
             {
                  buffer << "0";
             }
@@ -197,7 +199,7 @@ void Road::display(int timestep) {
         }
         else
         {
-            oss << "      ";
+            oss << "       ";
         }
         i++;
         for(int li = 0; li < road[0].size(); li++)
