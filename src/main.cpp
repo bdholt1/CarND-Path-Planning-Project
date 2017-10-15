@@ -245,7 +245,7 @@ int main() {
 
             const int num_lanes = 3;
             double ref_vel = 49.5; //mph
-            int SPEED_LIMIT = int(ref_vel); // * 0.447);
+            int SPEED_LIMIT = int(ref_vel);
 
             Road road(SPEED_LIMIT, num_lanes);
 

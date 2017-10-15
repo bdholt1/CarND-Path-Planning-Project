@@ -131,7 +131,7 @@ Vehicle::State Vehicle::_get_next_state(map<int,vector < vector<int> > > predict
 vector< Vehicle::Snapshot > Vehicle::_trajectory_for_state(State state, map<int,vector < vector<int> > > predictions, int horizon)
 {
   // remember current state
-  Snapshot initial_s = _snapshot();
+  Snapshot s = _snapshot();
 
 
   vector< Snapshot > trajectory;
@@ -149,15 +149,15 @@ vector< Vehicle::Snapshot > Vehicle::_trajectory_for_state(State state, map<int,
     trajectory.push_back(_snapshot());
 
     // need to remove first prediction for each vehicle.
-    for (auto it = predictions.begin(); it != predictions.end(); ++it)
+    for (auto pair: predictions)
     {
-      auto vec = it->second;
+      auto vec = pair.second;
       vec.erase(vec.begin());
     }
   }
 
   // restore state from snapshot
-  _restore_state_from_snapshot(initial_s);
+  _restore_state_from_snapshot(s);
   return trajectory;
 }
 
@@ -425,7 +425,7 @@ double Vehicle::_calculate_cost(vector< Vehicle::Snapshot >& trajectory, map<int
 {
   TrajectoryData trajectory_data = get_helper_data(*this, trajectory, predictions);
   double cost = 0.0;
-  cost += change_lane_cost(*this, trajectory, predictions, trajectory_data);
+  //cost += change_lane_cost(*this, trajectory, predictions, trajectory_data);
   cost += distance_from_goal_lane(*this, trajectory, predictions, trajectory_data);
   cost += inefficiency_cost(*this, trajectory, predictions, trajectory_data);
   cost += collision_cost(*this, trajectory, predictions, trajectory_data);
@@ -443,7 +443,7 @@ const double COMFORT    = 10e4;
 const double EFFICIENCY = 10e2;
 
 const double DESIRED_BUFFER = 1.5;  // timesteps
-const double PLANNING_HORIZON = 2;
+const double PLANNING_HORIZON = 5;
 
 
 double change_lane_cost(const Vehicle &vehicle, const vector<Vehicle::Snapshot> &trajectory, const map<int,vector < vector<int> > > &predictions, const TrajectoryData &data)
@@ -459,6 +459,7 @@ double change_lane_cost(const Vehicle &vehicle, const vector<Vehicle::Snapshot> 
     cost = COMFORT;
   if (proposed_lanes < cur_lanes)
     cost = -COMFORT;
+  cout << "lane change cost = " << cost << endl;
   return cost;
 }
 
@@ -470,7 +471,7 @@ double distance_from_goal_lane(const Vehicle &vehicle, const vector<Vehicle::Sna
   int lanes = data._end_lanes_from_goal;
   double multiplier = 5 * lanes / time_to_goal;
   double cost = multiplier * REACH_GOAL;
-
+  cout << "distance to goal cost = " << cost << endl;
   return cost;
 }
 
@@ -481,7 +482,9 @@ double inefficiency_cost(const Vehicle &vehicle, const vector<Vehicle::Snapshot>
   double diff = target_speed - speed;
   double pct = float(diff) / target_speed;
   double multiplier = pct * pct;
-  return multiplier * EFFICIENCY;
+  double cost = multiplier * EFFICIENCY;
+  cout << "inefficiency cost = " << cost << endl;
+  return cost;
 }
 
 double collision_cost(const Vehicle &vehicle, const vector<Vehicle::Snapshot> &trajectory, const map<int,vector < vector<int> > > &predictions, const TrajectoryData &data)
@@ -492,6 +495,8 @@ double collision_cost(const Vehicle &vehicle, const vector<Vehicle::Snapshot> &t
     double exponent = std::pow(time_til_collision, 2);
     double multiplier = std::exp(-exponent);
     return multiplier * COLLISION;
+    double cost = multiplier * COLLISION;
+    cout << "collision cost = " << cost << endl;
   }
   return 0;
 }
@@ -499,15 +504,25 @@ double collision_cost(const Vehicle &vehicle, const vector<Vehicle::Snapshot> &t
 double buffer_cost(const Vehicle &vehicle, const vector<Vehicle::Snapshot> &trajectory, const map<int,vector < vector<int> > > &predictions, const TrajectoryData &data)
 {
   double closest = data._closest_approach;
+  double cost = 0.0;
   if (std::abs(closest) < 1e-6)
-    return 10 * DANGER;
+  {
+    cost = 10 * DANGER;
+    cout << "buffer cost = " << cost << endl;
+    return cost;
+  }
 
   double timesteps_away = closest / data._avg_speed;
   if (timesteps_away > DESIRED_BUFFER)
-    return 0.0;
+  {
+    cout << "buffer cost = " << cost << endl;
+    return cost;
+  }
 
   double multiplier = 1.0 - std::pow(timesteps_away / DESIRED_BUFFER, 2);
-  return multiplier * DANGER;
+  cost = multiplier * DANGER;
+  cout << "buffer cost = " << cost << endl;
+  return cost;
 }
 
 TrajectoryData get_helper_data(const Vehicle& vehicle, vector< Vehicle::Snapshot >& trajectory, map<int,vector < vector<int> > > predictions)
