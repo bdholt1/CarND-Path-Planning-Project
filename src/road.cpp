@@ -59,7 +59,7 @@ void Road::populate_traffic() {
             {
 
                 Vehicle vehicle = Vehicle(l,s,lane_speed,0);
-                vehicle.state = "CS";
+                vehicle.state = Vehicle::State::CS;
                 this->vehicles_added += 1;
                 this->vehicles.insert(std::pair<int,Vehicle>(vehicles_added,vehicle));
                 vehicle_just_added = true;
@@ -88,7 +88,7 @@ void Road::populate_traffic(vector<vector<double>> sensor_fusion)
     //cout << "Vehicle " << id << ": s=" << s << " d=" << d <<" lane=" << l << endl;
 
     Vehicle vehicle = Vehicle(l, s, lane_speed, 0);
-    vehicle.state = "CS";
+    vehicle.state = Vehicle::State::CS;
     this->vehicles_added += 1;
     this->vehicles.insert(std::pair<int,Vehicle>(id, vehicle));
   }
@@ -128,7 +128,7 @@ void Road::display(int timestep) {
 
     Vehicle ego = this->vehicles.find(this->ego_key)->second;
     int s = ego.s;
-    string state = ego.state;
+    Vehicle::State state = ego.state;
 
     this->camera_center = max(s, this->update_width/2);
     int s_min = max(this->camera_center - this->update_width/2, 0);
@@ -229,7 +229,7 @@ void Road::add_ego(int lane_num, int s, vector<int> config_data) {
     }
     Vehicle ego = Vehicle(lane_num, s, this->lane_speeds[lane_num], 0);
     ego.configure(config_data);
-    ego.state = "KL";
+    ego.state = Vehicle::State::KL;
     this->vehicles.insert(std::pair<int,Vehicle>(ego_key,ego));
 
 }

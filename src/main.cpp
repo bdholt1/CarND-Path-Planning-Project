@@ -264,7 +264,7 @@ int main() {
             Vehicle ego = road.get_ego();
             lane = ego.lane;
             ref_vel = ego.v * 24;
-            cout << "New settings from FSM: lane =" << lane << " speed=" << car_speed << endl;
+            cout << "New settings from FSM: state = " << ego.state << ", lane =" << lane << ", speed=" << car_speed << endl;
 
             int prev_size = previous_path_x.size();
 

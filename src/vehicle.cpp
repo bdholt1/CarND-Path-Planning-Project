@@ -18,7 +18,7 @@ Vehicle::Vehicle(int lane, int s, int v, int a)
   this->s = s;
   this->v = v;
   this->a = a;
-  state = "CS";
+  state = State::CS;
   max_acceleration = -1;
 }
 
@@ -64,21 +64,48 @@ void Vehicle::update_state(map<int,vector < vector<int> > > predictions)
     state = _get_next_state(predictions);
 }
 
-string Vehicle::_get_next_state(map<int,vector < vector<int> > > predictions)
+Vehicle::State Vehicle::_get_next_state(map<int,vector < vector<int> > > predictions)
 {
-  vector<string> states = {"KL", "LCL", "LCR"};
-  if  (lane == 0)
+  vector<State> states;
+  if (state == State::PLCR)
   {
-    auto itr = std::find(states.begin(), states.end(), string("LCL"));
-    if (itr != states.end()) states.erase(itr);
+    states.push_back(State::KL);
+    states.push_back(State::PLCR);
+    states.push_back(State::LCR);
   }
-  if (lane == lanes_available -1)
+  else if (state == State::PLCL)
   {
-    auto itr = std::find(states.begin(), states.end(), string("LCR"));
-    if (itr != states.end()) states.erase(itr);
+    states.push_back(State::KL);
+    states.push_back(State::PLCL);
+    states.push_back(State::LCL);
+  }
+  else if (state == State::LCR)
+  {
+    states.push_back(State::KL);
+  }
+  else if (state == State::LCL)
+  {
+    states.push_back(State::KL);
+  }
+  else {
+    states.push_back(State::KL);
+    if (lane > 0)
+    {
+      states.push_back(State::PLCL);
+    }
+    if (lane < lanes_available - 1)
+    {
+      states.push_back(State::PLCR);
+    }
   }
 
-  typedef std::pair<std::string, double> StateCostPair;
+  // If there is only 1 state in the list of possible states
+  // then transition to it without computing costs.
+  if (states.size() == 1) {
+    return states[0];
+  }
+
+  typedef std::pair<State, double> StateCostPair;
   vector<StateCostPair> costs;
   for (auto state : states)
   {
@@ -101,19 +128,19 @@ string Vehicle::_get_next_state(map<int,vector < vector<int> > > predictions)
   return best.first;
 }
 
-vector< Vehicle::Snapshot > Vehicle::_trajectory_for_state(string state, map<int,vector < vector<int> > > predictions, int horizon)
+vector< Vehicle::Snapshot > Vehicle::_trajectory_for_state(State state, map<int,vector < vector<int> > > predictions, int horizon)
 {
   // remember current state
-  Snapshot s = _snapshot();
+  Snapshot initial_s = _snapshot();
 
-  // pretend to be in new proposed state
-  this->state = state;
+
   vector< Snapshot > trajectory;
   trajectory.push_back(s);
 
   for (int i = 0; i < horizon; ++i)
   {
     _restore_state_from_snapshot(s);
+    // pretend to be in new proposed state
     this->state = state;
     realize_state(predictions);
     assert(0 <= lane);
@@ -130,7 +157,7 @@ vector< Vehicle::Snapshot > Vehicle::_trajectory_for_state(string state, map<int
   }
 
   // restore state from snapshot
-  _restore_state_from_snapshot(s);
+  _restore_state_from_snapshot(initial_s);
   return trajectory;
 }
 
@@ -225,30 +252,26 @@ void Vehicle::realize_state(map<int,vector < vector<int> > > predictions)
   Given a state, realize it by adjusting acceleration and lane.
   Note - lane changes happen instantaneously.
   */
-  string state = this->state;
-  if(state.compare("CS") == 0)
+  switch(state)
   {
-    realize_constant_speed();
-  }
-  else if(state.compare("KL") == 0)
-  {
-    realize_keep_lane(predictions);
-  }
-  else if(state.compare("LCL") == 0)
-  {
-    realize_lane_change(predictions, "L");
-  }
-  else if(state.compare("LCR") == 0)
-  {
-    realize_lane_change(predictions, "R");
-  }
-  else if(state.compare("PLCL") == 0)
-  {
-    realize_prep_lane_change(predictions, "L");
-  }
-  else if(state.compare("PLCR") == 0)
-  {
-    realize_prep_lane_change(predictions, "R");
+    case State::CS  :
+      realize_constant_speed();
+      break;
+    case State::KL  :
+      realize_keep_lane(predictions);
+      break;
+    case State::LCL  :
+      realize_lane_change(predictions, "L");
+      break;
+    case State::LCR  :
+      realize_lane_change(predictions, "R");
+      break;
+    case State::PLCL  :
+      realize_prep_lane_change(predictions, "L");
+      break;
+    case State::PLCR  :
+      realize_prep_lane_change(predictions, "R");
+      break;
   }
 }
 

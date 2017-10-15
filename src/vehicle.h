@@ -15,6 +15,15 @@ using namespace std;
 class Vehicle {
 public:
 
+   enum State {
+     CS = 0,
+     KL,
+     PLCL,
+     LCL,
+     PLCR,
+     LCR
+   };
+
   struct collider{
 
     bool collision ; // is there a collision?
@@ -23,7 +32,7 @@ public:
   };
 
   struct Snapshot {
-    Snapshot(int lane, int s, int v, int a, string state)
+    Snapshot(int lane, int s, int v, int a, State state)
     : _lane(lane)
     , _s(s)
     , _v(v)
@@ -35,7 +44,7 @@ public:
     int _s;
     int _v;
     int _a;
-    string _state;
+    State _state;
   };
 
   int L = 1;
@@ -60,7 +69,7 @@ public:
 
   int goal_s;
 
-  string state;
+  State state;
 
   /**
   * Constructor
@@ -101,8 +110,8 @@ public:
   vector<vector<int> > generate_predictions(int horizon);
 
 private:
-  string _get_next_state(map<int,vector < vector<int> > > predictions);
-  vector< Snapshot > _trajectory_for_state(string state, map<int,vector < vector<int> > > predictions, int horizon=10);
+  State _get_next_state(map<int,vector < vector<int> > > predictions);
+  vector< Snapshot > _trajectory_for_state(State state, map<int,vector < vector<int> > > predictions, int horizon=10);
   Snapshot _snapshot() const;
   void _restore_state_from_snapshot(const Snapshot& snapshot);
   double _calculate_cost(vector< Vehicle::Snapshot >& trajectory, map<int,vector < vector<int> > > predictions);
