@@ -6,7 +6,10 @@
 #include <vector>
 
 #include "CostFunction.h"
-#include "Vehicle.h"
+#include "vehicle.h"
+
+
+using VehiclePredictions = std::map<int, std::vector <std::vector<int> > >;
 
 enum State {
  CS = 0,
@@ -34,9 +37,9 @@ struct Snapshot {
 };
 
 double const SPEED_INCREMENT = .224;
-double const MAX_SPEED = 49.96;
-double const TIME_INTERVAL = 0.02;
-double const PREDICTIONS_COUNT = 5;
+double const SPEED_LIMIT = 49.96;
+double const INTERVAL = 0.02;
+double const NUM_PREDICTIONS = 5;
 double const PREDICTION_INTERVAL = 0.15;
 
 class FSM

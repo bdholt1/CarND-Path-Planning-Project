@@ -106,9 +106,9 @@ double CostFunction::buffer_cost(const vector<Snapshot> &trajectory, const Vehic
 
 TrajectoryData get_helper_data(const std::vector<Snapshot> &trajectory, const VehiclePrediction &predictions)
 {
-  Vehicle::Snapshot current_snapshot = trajectory[0];
-  Vehicle::Snapshot first = trajectory[1];
-  Vehicle::Snapshot last = trajectory[trajectory.size()-1];
+  Snapshot current_snapshot = trajectory[0];
+  Snapshot first = trajectory[1];
+  Snapshot last = trajectory[trajectory.size()-1];
   double end_distance_to_goal = vehicle.goal_s - last._s;
   int end_lanes_from_goal = abs(vehicle.goal_lane - last._lane);
   double dt = 1.0 * trajectory.size();
@@ -119,14 +119,14 @@ TrajectoryData get_helper_data(const std::vector<Snapshot> &trajectory, const Ve
   vector<double> accels;
   double closest_approach = 999999;
   int collides = -1;
-  Vehicle::Snapshot last_snap = trajectory[0];
+  Snapshot last_snap = trajectory[0];
   map<int,vector < vector<int> > > filtered = filter_predictions_by_lane(predictions, proposed_lane);
   double max_accel = 0.0;
   double rms_acceleration = 0.0;
 
   for (std::size_t i = 1; i < PLANNING_HORIZON+1; ++i)
   {
-    Vehicle::Snapshot snapshot = trajectory[i];
+    Snapshot snapshot = trajectory[i];
     int lane = snapshot._lane;
     int s = snapshot._s;
     int v = snapshot._v;
