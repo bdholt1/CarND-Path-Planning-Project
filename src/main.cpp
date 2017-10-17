@@ -45,15 +45,8 @@ int main() {
 
   ifstream in_map_(map_file_.c_str(), ifstream::in);
 
-
-  //start in lane 1;
   const int num_lanes = 3;
-  int lane = 1;
-  int lane_change_wp = 0;
-  Vehicle ego(-1, 0.0, 6.0, 0.0, 0.0);
-  FSM state_machine(ego, num_lanes, lane);
-  Trajectory trajectory();
-  Planner planner{};
+  Planner planner(num_lanes);
 
   string line;
   while (getline(in_map_, line)) {
@@ -107,8 +100,8 @@ int main() {
 			planner.generate_trajectory(previous_path_x, previous_path_y);
 
             json msgJson;
-			msgJson["next_x"] = planner.get_x_values();
-			msgJson["next_y"] = planner.get_y_values();
+			msgJson["next_x"] = planner.next_x_values();
+			msgJson["next_y"] = planner.next_y_values();
 
             auto msg = "42[\"control\","+ msgJson.dump()+"]";
 

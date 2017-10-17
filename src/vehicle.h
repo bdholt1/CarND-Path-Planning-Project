@@ -6,7 +6,7 @@
 class Vehicle
 {
 public:
-  Vehicle(int id, double s, double d, double speed, double a);
+  Vehicle(int id);
 
   virtual ~Vehicle();
 

@@ -3,6 +3,13 @@
 #include "spline.h"
 #include "trajectory.h"
 
+Planner::Planner(int num_lanes)
+{
+  Vehicle ego_vehicle(-1);
+  FSM fsm(ego_vehicle, num_lanes);
+  m_fsm = fsm;
+}
+
 
 void Planner::add_waypoint(double x, double y, double s, double d_x, double d_y)
 {
@@ -13,147 +20,153 @@ void Planner::add_waypoint(double x, double y, double s, double d_x, double d_y)
   maps_dy.push_back(d_y);
 }
 
-void update(std::vector<std::vector<double>> sensor_fusion, double ego_s, double ego_d, double ego_speed)
+void Planner::update(std::vector<std::vector<double>> sensor_fusion, double ego_s, double ego_d, double ego_speed)
 {
 
 }
 
-void generate_trajectory(std::vector<double> previous_path_x, std::vector<double> previous_path_y);
+void Planner::generate_trajectory(std::vector<double> previous_path_x, std::vector<double> previous_path_y);
 {
-	int next_wp = -1;
-	double ref_x = car_x;
-	double ref_y = car_y;
-	double ref_yaw = deg2rad(car_yaw);
+  fsm.update_state(vehicle_predictions);
+  fsm.realize_state(vehicle_predictions);
+
+  double target_lane = fsm.ego_lane();
+  double target_speed = fsm.ego_speed();
 
 
-	if(prev_size < 2)
-	{
-		next_wp = NextWaypoint(ref_x, ref_y, ref_yaw, map_waypoints_x,map_waypoints_y,map_waypoints_dx,map_waypoints_dy);
-	}
-	else
-	{
-		ref_x = previous_path_x[prev_size-1];
-		double ref_x_prev = previous_path_x[prev_size-2];
-		ref_y = previous_path_y[prev_size-1];
-		double ref_y_prev = previous_path_y[prev_size-2];
-		ref_yaw = atan2(ref_y-ref_y_prev,ref_x-ref_x_prev);
-		next_wp = NextWaypoint(ref_x,ref_y,ref_yaw,map_waypoints_x,map_waypoints_y,map_waypoints_dx,map_waypoints_dy);
-
-		car_speed = (sqrt((ref_x-ref_x_prev)*(ref_x-ref_x_prev)+(ref_y-ref_y_prev)*(ref_y-ref_y_prev))/.02)*2.237;
-	}
+  int next_wp = -1;
+  double ref_x = car_x;
+  double ref_y = car_y;
+  double ref_yaw = deg2rad(car_yaw);
 
 
-	vector<double> ptsx;
-	vector<double> ptsy;
+  if(prev_size < 2)
+  {
+    next_wp = NextWaypoint(ref_x, ref_y, ref_yaw);
+  }
+  else
+  {
+    ref_x = previous_path_x[prev_size-1];
+    double ref_x_prev = previous_path_x[prev_size-2];
+    ref_y = previous_path_y[prev_size-1];
+    double ref_y_prev = previous_path_y[prev_size-2];
+    ref_yaw = atan2(ref_y-ref_y_prev,ref_x-ref_x_prev);
+    next_wp = NextWaypoint(ref_x,ref_y,ref_yaw);
 
-	if (prev_size < 2)
-	{
-	  double prev_car_x = car_x - cos(car_yaw);
-	  double prev_car_y = car_y - sin(car_yaw);
-
-	  ptsx.push_back(prev_car_x);
-	  ptsx.push_back(car_x);
-
-	  ptsy.push_back(prev_car_y);
-	  ptsy.push_back(car_y);
-	}
-	else
-	{
-	  ptsx.push_back(previous_path_x[prev_size-2]);
-	  ptsx.push_back(previous_path_x[prev_size-1]);
-
-	  ptsy.push_back(previous_path_y[prev_size-2]);
-	  ptsy.push_back(previous_path_y[prev_size-1]);
-
-	  ref_x = previous_path_x[prev_size-1];
-	  double ref_x_prev = previous_path_x[prev_size-2];
-	  ref_y = previous_path_y[prev_size-1];
-	  double ref_y_prev = previous_path_y[prev_size-2];
-	  ref_yaw = atan2(ref_y-ref_y_prev,ref_x-ref_x_prev);
-
-	  car_speed = (sqrt((ref_x-ref_x_prev)*(ref_x-ref_x_prev)+(ref_y-ref_y_prev)*(ref_y-ref_y_prev))/.02)*2.237;
-	}
-
-	vector<double> next_wp0 = getXY(car_s + 30, 2 + 4*lane, maps_s, maps_x, maps_y);
-	vector<double> next_wp1 = getXY(car_s + 60, 2 + 4*lane, maps_s, maps_x, maps_y);
-	vector<double> next_wp2 = getXY(car_s + 90, 2 + 4*lane, maps_s, maps_x, maps_y);
-
-	ptsx.push_back(next_wp0[0]);
-	ptsx.push_back(next_wp1[0]);
-	ptsx.push_back(next_wp2[0]);
-
-	ptsy.push_back(next_wp0[1]);
-	ptsy.push_back(next_wp1[1]);
-	ptsy.push_back(next_wp2[1]);
-
-	// transform the points into the car's local coordinate system
-	for (int i = 0; i < ptsx.size(); i++ )
-	{
-	  double shift_x = ptsx[i] - ref_x;
-	  double shift_y = ptsy[i] - ref_y;
-
-	  ptsx[i] = shift_x * cos(-ref_yaw) - shift_y * sin(-ref_yaw);
-	  ptsy[i] = shift_x * sin(-ref_yaw) + shift_y * cos(-ref_yaw);
-
-	}
-
-	tk::spline s;
-	s.set_points(ptsx,ptsy);
-
-	vector<double> next_x_vals;
-	vector<double> next_y_vals;
-
-	for(int i = 0; i < prev_size; i++)
-	{
-	  next_x_vals.push_back(previous_path_x[i]);
-	  next_y_vals.push_back(previous_path_y[i]);
-	}
-
-	double target_x = 30.0;
-	double target_y = s(target_x);
-	double target_dist = sqrt(target_x*target_x + target_y*target_y);
-
-	double x_start = 0;
-
-	for (int i = 0; i < 50 - prev_size; i++)
-	{
-	  if(ref_vel > car_speed)
-	  {
-		car_speed+=.224;
-	  }
-	  else if(ref_vel < car_speed)
-	  {
-		car_speed-=.224;
-	  }
-
-	  double N = target_dist*2.24/(.02*car_speed);
-	  double x_point = x_start+(target_x)/N;
-	  double y_point = s(x_point);
-
-	  x_start = x_point;
-
-	  double tmp_x = x_point;
-	  double tmp_y = y_point;
-
-	  // transform the points back into real-world coordinate frame
-	  x_point = tmp_x * cos(ref_yaw) - tmp_y * sin(ref_yaw);
-	  y_point = tmp_x * sin(ref_yaw) + tmp_y * cos(ref_yaw);
-
-	  x_point += ref_x;
-	  y_point += ref_y;
-
-	  next_x_vals.push_back(x_point);
-	  next_y_vals.push_back(y_point);
-	}
+    car_speed = (sqrt((ref_x-ref_x_prev)*(ref_x-ref_x_prev)+(ref_y-ref_y_prev)*(ref_y-ref_y_prev))/.02)*2.237;
+  }
 
 
+  vector<double> ptsx;
+  vector<double> ptsy;
 
-	int prev_size = previous_path_x.size();
+  if (prev_size < 2)
+  {
+    double prev_car_x = car_x - cos(car_yaw);
+    double prev_car_y = car_y - sin(car_yaw);
 
-	if (prev_size > 0)
-	{
-	  car_s = end_path_s;
-	}
+    ptsx.push_back(prev_car_x);
+    ptsx.push_back(car_x);
+
+    ptsy.push_back(prev_car_y);
+    ptsy.push_back(car_y);
+  }
+  else
+  {
+    ptsx.push_back(previous_path_x[prev_size-2]);
+    ptsx.push_back(previous_path_x[prev_size-1]);
+
+    ptsy.push_back(previous_path_y[prev_size-2]);
+    ptsy.push_back(previous_path_y[prev_size-1]);
+
+    ref_x = previous_path_x[prev_size-1];
+    double ref_x_prev = previous_path_x[prev_size-2];
+    ref_y = previous_path_y[prev_size-1];
+    double ref_y_prev = previous_path_y[prev_size-2];
+    ref_yaw = atan2(ref_y-ref_y_prev,ref_x-ref_x_prev);
+
+    car_speed = (sqrt((ref_x-ref_x_prev)*(ref_x-ref_x_prev)+(ref_y-ref_y_prev)*(ref_y-ref_y_prev))/.02)*2.237;
+  }
+
+  vector<double> next_wp0 = getXY(car_s + 30, 2 + 4*lane, maps_s, maps_x, maps_y);
+  vector<double> next_wp1 = getXY(car_s + 60, 2 + 4*lane, maps_s, maps_x, maps_y);
+  vector<double> next_wp2 = getXY(car_s + 90, 2 + 4*lane, maps_s, maps_x, maps_y);
+
+  ptsx.push_back(next_wp0[0]);
+  ptsx.push_back(next_wp1[0]);
+  ptsx.push_back(next_wp2[0]);
+
+  ptsy.push_back(next_wp0[1]);
+  ptsy.push_back(next_wp1[1]);
+  ptsy.push_back(next_wp2[1]);
+
+  // transform the points into the car's local coordinate system
+  for (int i = 0; i < ptsx.size(); i++ )
+  {
+    double shift_x = ptsx[i] - ref_x;
+    double shift_y = ptsy[i] - ref_y;
+
+    ptsx[i] = shift_x * cos(-ref_yaw) - shift_y * sin(-ref_yaw);
+    ptsy[i] = shift_x * sin(-ref_yaw) + shift_y * cos(-ref_yaw);
+
+  }
+
+  tk::spline s;
+  s.set_points(ptsx,ptsy);
+
+  m_next_x_vals.clear();
+  m_next_y_vals.clear();
+
+  for(int i = 0; i < prev_size; i++)
+  {
+    m_next_x_vals.push_back(previous_path_x[i]);
+    m_next_y_vals.push_back(previous_path_y[i]);
+  }
+
+  double target_x = 30.0;
+  double target_y = s(target_x);
+  double target_dist = sqrt(target_x*target_x + target_y*target_y);
+
+  double x_start = 0;
+
+  for (int i = 0; i < 50 - prev_size; i++)
+  {
+    if(ref_vel > car_speed)
+    {
+    car_speed+=.224;
+    }
+    else if(ref_vel < car_speed)
+    {
+    car_speed-=.224;
+    }
+
+    double N = target_dist*2.24/(.02*car_speed);
+    double x_point = x_start+(target_x)/N;
+    double y_point = s(x_point);
+
+    x_start = x_point;
+
+    double tmp_x = x_point;
+    double tmp_y = y_point;
+
+    // transform the points back into real-world coordinate frame
+    x_point = tmp_x * cos(ref_yaw) - tmp_y * sin(ref_yaw);
+    y_point = tmp_x * sin(ref_yaw) + tmp_y * cos(ref_yaw);
+
+    x_point += ref_x;
+    y_point += ref_y;
+
+    m_next_x_vals.push_back(x_point);
+    m_next_y_vals.push_back(y_point);
+  }
+
+  int prev_size = previous_path_x.size();
+
+  if (prev_size > 0)
+  {
+    car_s = end_path_s;
+  }
+
 }
 
 double distance(double x1, double y1, double x2, double y2) const

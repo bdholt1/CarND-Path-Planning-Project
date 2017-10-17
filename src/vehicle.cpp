@@ -11,13 +11,8 @@
 
 const double BUFFER_DISTANCE = 20.0;
 
-Vehicle::Vehicle(int id, double s, double d, double speed, double a)
+Vehicle::Vehicle(int id)
 : m_id(id)
-, m_s(s)
-, m_d(d)
-, m_v(speed)
-, m_a(a)
-, m_lane(d/4)
 {
 }
 
@@ -79,6 +74,8 @@ Vehicle Vehicle::state_at(double t)
 
   int s = m_s + m_v * t + m_a * t * t / 2;
   int v = m_v + m_a * t;
-  return Vehicle(m_id, s, m_d, v, m_a);
+  Vehicle vehicle(m_id);
+  vehicle.update(s, m_d, v, m_a);
+  return vehicle;
 }
 

@@ -1,11 +1,12 @@
 #include "Eigen-3.3/Eigen/Core"
 #include "Eigen-3.3/Eigen/QR"
 #include <vector>
+#include "trajectory.h"
 
 using namespace Eigen;
 using namespace std;
 
-vector<double> JMT(vector< double> start, vector <double> end, double T)
+vector<double> JMT(vector<double> start, vector<double> end, double T)
 {
     /*
     Calculate the Jerk Minimizing Trajectory that connects the initial state
@@ -48,3 +49,4 @@ vector<double> JMT(vector< double> start, vector <double> end, double T)
     return coef;
 
 }
+

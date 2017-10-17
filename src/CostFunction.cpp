@@ -1,6 +1,8 @@
 
 #include "CostFunction.h"
 
+#include <cmath>
+
 // priority levels for costs
 const double COLLISION  = 10e6;
 const double DANGER     = 10e5;
@@ -12,11 +14,11 @@ const double DESIRED_BUFFER = 1.5;  // timesteps
 const double PLANNING_HORIZON = 5;
 
 
-double CostFunction::calculate_cost(const std::vector<Snapshot> &trajectory, const VehiclePrediction &predictions)
+double CostFunction::calculate_cost(const std::vector<Snapshot> &trajectory, const VehiclePredictions &predictions)
 {
-  TrajectoryData trajectory_data = get_helper_data(*this, trajectory, predictions);
+  TrajectoryData trajectory_data = get_helper_data(trajectory, predictions);
   double cost = 0.0;
-  //cost += change_lane_cost(*this, trajectory, predictions, trajectory_data);
+  cost += change_lane_cost(trajectory, predictions, trajectory_data);
   cost += distance_from_goal_lane(trajectory, predictions, trajectory_data);
   cost += inefficiency_cost(trajectory, predictions, trajectory_data);
   cost += collision_cost(trajectory, predictions, trajectory_data);
@@ -25,7 +27,7 @@ double CostFunction::calculate_cost(const std::vector<Snapshot> &trajectory, con
   return cost;
 }
 
-double CostFunction::change_lane_cost(const vector<Snapshot> &trajectory, const VehiclePrediction &predictions, const TrajectoryData &data)
+double CostFunction::change_lane_cost(const std::vector<Snapshot> &trajectory, const VehiclePredictions &predictions, const TrajectoryData &data)
 {
   /**
   Penalizes lane changes AWAY from the goal lane and rewards
@@ -42,7 +44,7 @@ double CostFunction::change_lane_cost(const vector<Snapshot> &trajectory, const 
   return cost;
 }
 
-double CostFunction::distance_from_goal_lane(const vector<Snapshot> &trajectory, const VehiclePrediction &predictions, const TrajectoryData &data)
+double CostFunction::distance_from_goal_lane(const std::vector<Snapshot> &trajectory, const VehiclePredictions &predictions, const TrajectoryData &data)
 {
   double distance = std::abs(data._end_distance_to_goal);
   distance = std::max(distance, 1.0);
@@ -54,7 +56,7 @@ double CostFunction::distance_from_goal_lane(const vector<Snapshot> &trajectory,
   return cost;
 }
 
-double CostFunction::inefficiency_cost(const vector<Snapshot> &trajectory, const VehiclePrediction &predictions, const TrajectoryData &data)
+double CostFunction::inefficiency_cost(const std::vector<Snapshot> &trajectory, const VehiclePredictions &predictions, const TrajectoryData &data)
 {
   double speed = data._avg_speed;
   double target_speed = vehicle.target_speed;
@@ -66,7 +68,7 @@ double CostFunction::inefficiency_cost(const vector<Snapshot> &trajectory, const
   return cost;
 }
 
-double CostFunction::collision_cost(const vector<Vehicle::Snapshot> &trajectory, const VehiclePrediction &predictions, const TrajectoryData &data)
+double CostFunction::collision_cost(const std::vector<Vehicle::Snapshot> &trajectory, const VehiclePredictions &predictions, const TrajectoryData &data)
 {
   if (data._collides != -1)
   {
@@ -80,7 +82,7 @@ double CostFunction::collision_cost(const vector<Vehicle::Snapshot> &trajectory,
   return 0;
 }
 
-double CostFunction::buffer_cost(const vector<Snapshot> &trajectory, const VehiclePrediction &predictions, const TrajectoryData &data)
+double CostFunction::buffer_cost(const std::vector<Snapshot> &trajectory, const VehiclePredictions &predictions, const TrajectoryData &data)
 {
   double closest = data._closest_approach;
   double cost = 0.0;
@@ -104,7 +106,7 @@ double CostFunction::buffer_cost(const vector<Snapshot> &trajectory, const Vehic
   return cost;
 }
 
-TrajectoryData get_helper_data(const std::vector<Snapshot> &trajectory, const VehiclePrediction &predictions)
+TrajectoryData get_helper_data(const std::vector<Snapshot> &trajectory, const VehiclePredictions &predictions)
 {
   Snapshot current_snapshot = trajectory[0];
   Snapshot first = trajectory[1];
@@ -198,7 +200,7 @@ bool check_collision(Snapshot& snapshot, int s_previous, int s_now)
 }
 
 
-VehiclePrediction filter_predictions_by_lane(const VehiclePrediction &predictions, int lane)
+VehiclePredictions filter_predictions_by_lane(const VehiclePredictions &predictions, int lane)
 {
   VehiclePrediction filtered;
 

@@ -1,9 +1,13 @@
+
+#include "CostFunction.h"
 #include "FSM.h"
 
-FSM::FSM(const Vehicle& ego, int num_lanes, int lane)
+using namespace std;
+
+FSM::FSM(const Vehicle& ego, int num_lanes)
 : m_ego(ego)
 , m_num_lanes(num_lanes)
-, m_lane(lane)
+, m_lane(1)
 {
   m_state = State::CS;
 }
@@ -43,7 +47,7 @@ void FSM::update_state(VehiclePredictions predictions)
     }
     */
 
-    state = get_next_state(predictions);
+    m_state = get_next_state(predictions);
 }
 
 void FSM::realize_state(VehiclePredictions predictions)
@@ -52,7 +56,7 @@ void FSM::realize_state(VehiclePredictions predictions)
   Given a state, realize it by adjusting acceleration and lane.
   Note - lane changes happen instantaneously.
   */
-  switch(state)
+  switch(m_state)
   {
     case State::CS  :
       realize_constant_speed();
@@ -75,29 +79,29 @@ void FSM::realize_state(VehiclePredictions predictions)
   }
 }
 
-FSM::State FSM::get_next_state(VehiclePredictions predictions)
+State FSM::get_next_state(VehiclePredictions predictions)
 {
   vector<State> states;
-  if (state == State::PLCR)
+  if (m_state == State::PLCR)
   {
     // Prepare Lane Change Right can keep lane, continue preparing or change right
     states.push_back(State::KL);
     states.push_back(State::PLCR);
     states.push_back(State::LCR);
   }
-  else if (state == State::PLCL)
+  else if (m_state == State::PLCL)
   {
     // Prepare Lane Change Left can keep lane, continue preparing or change left
     states.push_back(State::KL);
     states.push_back(State::PLCL);
     states.push_back(State::LCL);
   }
-  else if (state == State::LCR)
+  else if (m_state == State::LCR)
   {
     // Once we're changing lane we have to go to keep lane
     states.push_back(State::KL);
   }
-  else if (state == State::LCL)
+  else if (m_state == State::LCL)
   {
     // Once we're changing lane we have to go to keep lane
     states.push_back(State::KL);
@@ -105,12 +109,12 @@ FSM::State FSM::get_next_state(VehiclePredictions predictions)
   else {
     // Keep lane can continue ...
     states.push_back(State::KL);
-    if (lane < lanes_available - 1)
+    if (m_lane < m_lanes_available - 1)
     {
       // ... or prepare to change right
       states.push_back(State::PLCR);
     }
-    if (lane > 0)
+    if (m_lane > 0)
     {
       // ... or prepare to change left
       states.push_back(State::PLCL);
@@ -129,7 +133,8 @@ FSM::State FSM::get_next_state(VehiclePredictions predictions)
   {
     VehiclePredictions predictions_copy(predictions);
     vector<Snapshot> trajectory = _trajectory_for_state(state, predictions_copy);
-    double cost = m_cf.calculate_cost(trajectory, predictions);
+    CostFunction cf;
+    double cost = cf.calculate_cost(trajectory, predictions);
     cout << "cost for state " << state << " = " << cost << endl;
     costs.push_back(make_pair(state, cost));
   }
@@ -190,12 +195,11 @@ int FSM::max_accel_for_lane(VehiclePredictions predictions, int lane, int s)
 
 void FSM::realize_constant_speed()
 {
-  a = 0;
 }
 
 void FSM::realize_keep_lane(VehiclePredictions predictions)
 {
-  this->a = _max_accel_for_lane(predictions, this->lane, this->s);
+  this->a = _max_accel_for_lane(predictions, this->m_lane, this->s);
 }
 
 void FSM::realize_lane_change(VehiclePredictions predictions, string direction)
@@ -326,7 +330,7 @@ vector< FSM::Snapshot > FSM::_trajectory_for_state(State state, VehiclePredictio
 
 FSM::Snapshot FSM::_snapshot() const
 {
-  return Snapshot(this->lane, this->s, this->v, this->a, this->state);
+  return Snapshot(this->lane, this->s, this->v, this->a, this->m_state);
 }
 
 void FSM::_restore_state_from_snapshot(const FSM::Snapshot& snapshot)

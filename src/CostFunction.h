@@ -3,8 +3,8 @@
 
 #include <vector>
 
-#include "Snapshot.h"
-#include "Vehicle.h"
+#include "snapshot.h"
+#include "vehicle.h"
 
 
 struct TrajectoryData {
@@ -39,20 +39,18 @@ struct TrajectoryData {
 class CostFunction
 {
 public:
-  double calculate_cost(const vector<Snapshot> &trajectory, const VehiclePrediction &predictions);
+  double calculate_cost(const std::vector<Snapshot> &trajectory, const VehiclePredictions &predictions);
 
 private:
-  double change_lane_cost(const Vehicle &vehicle, const vector<Snapshot> &trajectory, const VehiclePrediction &predictions, const TrajectoryData &data);
-  double distance_from_goal_lane(const Vehicle &vehicle, const vector<Snapshot> &trajectory, const VehiclePrediction &predictions, const TrajectoryData &data);
-  double inefficiency_cost(const Vehicle &vehicle, const vector<Snapshot> &trajectory, const VehiclePrediction &predictions, const TrajectoryData &data);
-  double collision_cost(const Vehicle &vehicle, const vector<Snapshot> &trajectory, const VehiclePrediction &predictions, const TrajectoryData &data);
-  double buffer_cost(const Vehicle &vehicle, const vector<Snapshot> &trajectory, const VehiclePrediction &predictions, const TrajectoryData &data);
+  double change_lane_cost(const std::vector<Snapshot> &trajectory, const VehiclePredictions &predictions, const TrajectoryData &data);
+  double distance_from_goal_lane(const std::vector<Snapshot> &trajectory, const VehiclePredictions &predictions, const TrajectoryData &data);
+  double inefficiency_cost(const std::vector<Snapshot> &trajectory, const VehiclePredictions &predictions, const TrajectoryData &data);
+  double collision_cost(const std::vector<Snapshot> &trajectory, const VehiclePredictions &predictions, const TrajectoryData &data);
+  double buffer_cost(const std::vector<Snapshot> &trajectory, const VehiclePredictions &predictions, const TrajectoryData &data);
 
-  TrajectoryData get_helper_data(const Vehicle& vehicle, vector<Snapshot >& trajectory, VehiclePrediction predictions);
+  TrajectoryData get_helper_data(const Vehicle& vehicle, std::vector<Snapshot >& trajectory, VehiclePredictions predictions);
 
-  bool check_collision(Snapshot& snapshot, int s_previous, int s_now);
-
-  VehiclePrediction filter_predictions_by_lane(VehiclePrediction predictions, int lane);
+  VehiclePredictions filter_predictions_by_lane(VehiclePredictions predictions, int lane);
 };
 
 #endif COST_FUNCTION_H
