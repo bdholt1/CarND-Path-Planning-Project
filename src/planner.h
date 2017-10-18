@@ -1,6 +1,8 @@
 #ifndef PLANNER_H
 #define PLANNER_H
 
+#include <chrono>
+#include <map>
 #include <vector>
 
 #include "FSM.h"
@@ -11,7 +13,6 @@ public:
   Planner(int num_lanes);
 
   ~Planner();
-
 
   void add_waypoint(double x, double y, double s, double d_x, double d_y);
 
@@ -24,6 +25,9 @@ public:
 
 private:
   FSM fsm;
+  std::map<int, Vehicle> vehicles;
+  VehiclePredictions predictions;
+  std::chrono::system_clock::time_point m_time;
 
   std::vector<double> maps_x;
   std::vector<double> maps_y;

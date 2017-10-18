@@ -48,9 +48,9 @@ private:
   double collision_cost(const std::vector<Snapshot> &trajectory, const VehiclePredictions &predictions, const TrajectoryData &data);
   double buffer_cost(const std::vector<Snapshot> &trajectory, const VehiclePredictions &predictions, const TrajectoryData &data);
 
-  TrajectoryData get_helper_data(const Vehicle& vehicle, std::vector<Snapshot >& trajectory, VehiclePredictions predictions);
+  TrajectoryData get_helper_data(const std::vector<Snapshot >& trajectory, const VehiclePredictions &predictions);
 
-  VehiclePredictions filter_predictions_by_lane(VehiclePredictions predictions, int lane);
+  VehiclePredictions filter_predictions_by_lane(const VehiclePredictions &predictions, int lane);
 };
 
 #endif COST_FUNCTION_H

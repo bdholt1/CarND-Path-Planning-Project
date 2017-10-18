@@ -2,6 +2,7 @@
 #include "CostFunction.h"
 
 #include <cmath>
+#include <iostream>
 
 // priority levels for costs
 const double COLLISION  = 10e6;
@@ -13,6 +14,7 @@ const double EFFICIENCY = 10e2;
 const double DESIRED_BUFFER = 1.5;  // timesteps
 const double PLANNING_HORIZON = 5;
 
+using namespace std;
 
 double CostFunction::calculate_cost(const std::vector<Snapshot> &trajectory, const VehiclePredictions &predictions)
 {
@@ -106,7 +108,7 @@ double CostFunction::buffer_cost(const std::vector<Snapshot> &trajectory, const 
   return cost;
 }
 
-TrajectoryData get_helper_data(const std::vector<Snapshot> &trajectory, const VehiclePredictions &predictions)
+TrajectoryData CostFunction::get_helper_data(const std::vector<Snapshot> &trajectory, const VehiclePredictions &predictions)
 {
   Snapshot current_snapshot = trajectory[0];
   Snapshot first = trajectory[1];
@@ -114,7 +116,7 @@ TrajectoryData get_helper_data(const std::vector<Snapshot> &trajectory, const Ve
   double end_distance_to_goal = vehicle.goal_s - last._s;
   int end_lanes_from_goal = abs(vehicle.goal_lane - last._lane);
   double dt = 1.0 * trajectory.size();
-  int proposed_lane = first._lane;
+  int proposed_lane = first.m_new_lane;
   double avg_speed = (last._s - current_snapshot._s) / dt;
 
   // initialize a bunch of variables

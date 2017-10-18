@@ -4,6 +4,8 @@
 #include <map>
 #include <vector>
 
+#include "vehicle.h"
+
 using VehiclePredictions = std::map<int, std::vector <std::vector<int> > >;
 
 enum State {
@@ -16,19 +18,19 @@ enum State {
 };
 
 struct Snapshot {
-  Snapshot(int lane, int s, int v, int a, State state)
-  : _lane(lane)
-  , _s(s)
-  , _v(v)
-  , _a(a)
-  , _state(state)
+  Snapshot(Vehicle ego, int lanes_available, int new_lane, double target_speed, State state)
+  : m_ego(ego)
+  , m_lanes_available(lanes_available)
+  , m_new_lane(new_lane)
+  , m_target_speed(target_speed)
+  , m_state(state)
   {}
 
-  int _lane;
-  int _s;
-  int _v;
-  int _a;
-  State _state;
+  Vehicle m_ego;
+  int m_lanes_available;
+  int m_new_lane;
+  double m_target_speed;
+  State m_state;
 };
 
 #endif SNAPSHOT_H

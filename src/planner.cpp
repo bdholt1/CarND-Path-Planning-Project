@@ -3,13 +3,14 @@
 #include "spline.h"
 #include "trajectory.h"
 
+using namespace std;
+
 Planner::Planner(int num_lanes)
 {
   Vehicle ego_vehicle(-1);
-  FSM fsm(ego_vehicle, num_lanes);
-  m_fsm = fsm;
+  m_fsm = FSM{ego_vehicle, num_lanes};
+  m_time = std::chrono::high_resolution_clock::now();
 }
-
 
 void Planner::add_waypoint(double x, double y, double s, double d_x, double d_y)
 {
@@ -22,6 +23,40 @@ void Planner::add_waypoint(double x, double y, double s, double d_x, double d_y)
 
 void Planner::update(std::vector<std::vector<double>> sensor_fusion, double ego_s, double ego_d, double ego_speed)
 {
+  chrono::system_clock::time_point new_time = std::chrono::high_resolution_clock::now();
+  chrono::duration<double, std::milli> fp_ms = new_time - m_time;
+
+  double t = fp_ms.count() / 1000;
+  m_time = new_time;
+
+  m_fsm.update_ego(ego_s, ego_d, ego_speed, t);
+
+  predictions.clear();
+  for (auto vec : sensor_fusion)
+  {
+    double id = vec[0];
+    double x = vec[1];
+    double y = vec[2];
+    double vx = vec[3];
+    double vy = vec[4];
+    double s = vec[5];
+    double d = vec[6];
+
+    if (vehicles.find(id) == vehicles.end())
+    {
+      Vehicle v(id);
+      v.update(s, d, sqrt(vx*vx + vy*vy), t);
+      vehicles[id] = v;
+    }
+    else
+    {
+      vehicles[id].update(s, d, sqrt(vx*vx + vy*vy), t);
+    }
+
+    std::vector <std::vector<int> > preds = vehicle[id].generate_predictions(INTERVAL);
+    predictions[id] = preds;
+    }
+  }
 
 }
 
@@ -32,7 +67,6 @@ void Planner::generate_trajectory(std::vector<double> previous_path_x, std::vect
 
   double target_lane = fsm.ego_lane();
   double target_speed = fsm.ego_speed();
-
 
   int next_wp = -1;
   double ref_x = car_x;

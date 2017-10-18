@@ -2,14 +2,22 @@
 #include "CostFunction.h"
 #include "FSM.h"
 
+#include <algorithm>
+#include <cassert>
+#include <iostream>
+
 using namespace std;
 
-FSM::FSM(const Vehicle& ego, int num_lanes)
+FSM::FSM(const Vehicle& ego, int lanes_available)
 : m_ego(ego)
-, m_num_lanes(num_lanes)
-, m_lane(1)
+, m_lanes_available(lanes_available)
 {
   m_state = State::CS;
+}
+
+void FSM::update_ego(double ego_s, double ego_d, double ego_speed, double t)
+{
+  m_ego.update(ego_s, ego_d, ego_speed, t);
 }
 
 void FSM::update_state(VehiclePredictions predictions)
@@ -109,12 +117,12 @@ State FSM::get_next_state(VehiclePredictions predictions)
   else {
     // Keep lane can continue ...
     states.push_back(State::KL);
-    if (m_lane < m_lanes_available - 1)
+    if (ego_lane() < m_lanes_available - 1)
     {
       // ... or prepare to change right
       states.push_back(State::PLCR);
     }
-    if (m_lane > 0)
+    if (ego_lane() > 0)
     {
       // ... or prepare to change left
       states.push_back(State::PLCL);
@@ -127,12 +135,12 @@ State FSM::get_next_state(VehiclePredictions predictions)
     return states[0];
   }
 
-  typedef std::pair<State, double> StateCostPair;
+  typedef pair<State, double> StateCostPair;
   vector<StateCostPair> costs;
   for (auto state : states)
   {
     VehiclePredictions predictions_copy(predictions);
-    vector<Snapshot> trajectory = _trajectory_for_state(state, predictions_copy);
+    vector<Snapshot> trajectory = trajectory_for_state(state, predictions_copy, 10);
     CostFunction cf;
     double cost = cf.calculate_cost(trajectory, predictions);
     cout << "cost for state " << state << " = " << cost << endl;
@@ -151,55 +159,16 @@ State FSM::get_next_state(VehiclePredictions predictions)
   return best.first;
 }
 
-int FSM::max_accel_for_lane(VehiclePredictions predictions, int lane, int s)
-{
-  int delta_v_til_target = target_speed - v;
-  int max_acc = min(max_acceleration, delta_v_til_target);
-
-  map<int, vector<vector<int> > >::iterator it = predictions.begin();
-  vector<vector<vector<int> > > in_front;
-  while(it != predictions.end())
-  {
-    int v_id = it->first;
-
-    vector<vector<int> > v = it->second;
-
-    if((v[0][0] == lane) && (v[0][1] > s))
-    {
-      in_front.push_back(v);
-    }
-    it++;
-  }
-
-  if(in_front.size() > 0)
-  {
-    int min_s = 1000;
-    vector<vector<int>> leading = {};
-    for(int i = 0; i < in_front.size(); i++)
-    {
-      if((in_front[i][0][1]-s) < min_s)
-      {
-        min_s = (in_front[i][0][1]-s);
-        leading = in_front[i];
-      }
-    }
-    int next_pos = leading[1][1];
-    int my_next = s + this->v;
-    int separation_next = next_pos - my_next;
-    int available_room = separation_next - preferred_buffer;
-    max_acc = min(max_acc, available_room);
-  }
-
-  return max_acc;
-}
-
 void FSM::realize_constant_speed()
 {
 }
 
 void FSM::realize_keep_lane(VehiclePredictions predictions)
 {
-  this->a = _max_accel_for_lane(predictions, this->m_lane, this->s);
+  // stay in the same lane
+  m_new_lane = ego_lane();
+
+
 }
 
 void FSM::realize_lane_change(VehiclePredictions predictions, string direction)
@@ -209,10 +178,12 @@ void FSM::realize_lane_change(VehiclePredictions predictions, string direction)
   {
     delta = -1;
   }
-  this->lane += delta;
-  int lane = this->lane;
-  int s = this->s;
-  this->a = _max_accel_for_lane(predictions, lane, s);
+  int lane = m_ego.get_lane() + delta;
+  // realise the lane change
+  m_ego.set_lane(lane);
+  int m_new_lane = lane;
+
+
 }
 
 void FSM::realize_prep_lane_change(VehiclePredictions predictions, string direction)
@@ -222,98 +193,31 @@ void FSM::realize_prep_lane_change(VehiclePredictions predictions, string direct
   {
     delta = -1;
   }
-  int lane = this->lane + delta;
-
-  map<int, vector<vector<int> > >::iterator it = predictions.begin();
-  vector<vector<vector<int> > > at_behind;
-  while(it != predictions.end())
-  {
-    int v_id = it->first;
-    vector<vector<int> > v = it->second;
-
-    if((v[0][0] == lane) && (v[0][1] <= this->s))
-    {
-      at_behind.push_back(v);
-    }
-    it++;
-  }
-  if(at_behind.size() > 0)
-  {
-    int max_s = -1000;
-    vector<vector<int> > nearest_behind = {};
-    for(int i = 0; i < at_behind.size(); i++)
-    {
-      if((at_behind[i][0][1]) > max_s)
-      {
-        max_s = at_behind[i][0][1];
-        nearest_behind = at_behind[i];
-      }
-    }
-    int target_vel = nearest_behind[1][1] - nearest_behind[0][1];
-    int delta_v = this->v - target_vel;
-    int delta_s = this->s - nearest_behind[0][1];
-    if(delta_v != 0)
-    {
-      int time = -2 * delta_s/delta_v;
-      int a;
-      if (time == 0)
-      {
-        a = this->a;
-      }
-      else
-      {
-        a = delta_v/time;
-      }
-      if(a > this->max_acceleration)
-      {
-        a = this->max_acceleration;
-      }
-      if(a < -this->max_acceleration)
-      {
-        a = -this->max_acceleration;
-      }
-      this->a = a;
-    }
-    else
-    {
-      int my_min_acc = max(-this->max_acceleration,-delta_s);
-      this->a = my_min_acc;
-    }
-  }
+  int lane = m_ego.get_lane() + delta;
+  // prepare for lane change
+  int m_new_lane = lane;
 
 }
 
-vector<vector<int> > FSM::generate_predictions(int horizon = 10)
-{
-  vector<vector<int> > predictions;
-  for( int i = 0; i < horizon; i++)
-  {
-    vector<int> check1 = state_at(i);
-    vector<int> lane_s = {check1[0], check1[1]};
-    predictions.push_back(lane_s);
-  }
-  return predictions;
 
-}
-
-vector< FSM::Snapshot > FSM::_trajectory_for_state(State state, VehiclePredictions predictions, int horizon)
+vector< Snapshot > FSM::trajectory_for_state(State state, VehiclePredictions predictions, int horizon)
 {
   // remember current state
-  Snapshot s = _snapshot();
+  Snapshot s = take_snapshot();
 
   vector< Snapshot > trajectory;
   trajectory.push_back(s);
 
   for (int i = 0; i < horizon; ++i)
   {
-    _restore_state_from_snapshot(s);
+    restore_state_from_snapshot(s);
     // pretend to be in new proposed state
-    this->state = state;
+    m_state = state;
     realize_state(predictions);
-    assert(0 <= lane);
-    assert(lane < lanes_available);
-    increment();
-    trajectory.push_back(_snapshot());
+    assert(0 <= ego_lane());
+    assert(ego_lane() < m_lanes_available);
+    m_ego.increment(i * INTERVAL);
+    trajectory.push_back(take_snapshot());
 
     // need to remove first prediction for each vehicle.
     for (auto pair: predictions)
@@ -324,20 +228,20 @@ vector< FSM::Snapshot > FSM::_trajectory_for_state(State state, VehiclePredictio
   }
 
   // restore state from snapshot
-  _restore_state_from_snapshot(s);
+  restore_state_from_snapshot(s);
   return trajectory;
 }
 
-FSM::Snapshot FSM::_snapshot() const
+Snapshot FSM::take_snapshot() const
 {
-  return Snapshot(this->lane, this->s, this->v, this->a, this->m_state);
+  return Snapshot(m_ego, m_lanes_available, m_new_lane, m_target_speed, m_state);
 }
 
-void FSM::_restore_state_from_snapshot(const FSM::Snapshot& snapshot)
+void FSM::restore_state_from_snapshot(const Snapshot& snapshot)
 {
-  this->lane = snapshot._lane;
-  this->s = snapshot._s;
-  this->v = snapshot._v;
-  this->a = snapshot._a;
-  this->state = snapshot._state;
+  m_ego = snapshot.m_ego;
+  m_lanes_available = snapshot.m_lanes_available;
+  m_new_lane = snapshot.m_new_lane;
+  m_target_speed = snapshot.m_target_speed;
+  m_state = snapshot.m_state;
 }
