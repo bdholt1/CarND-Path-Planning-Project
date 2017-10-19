@@ -24,9 +24,9 @@ public:
   std::vector<double> next_y_values();
 
 private:
-  FSM fsm;
-  std::map<int, Vehicle> vehicles;
-  VehiclePredictions predictions;
+  FSM m_fsm;
+  std::map<int, Vehicle> m_vehicles;
+  VehiclePredictions m_predictions;
   std::chrono::system_clock::time_point m_time;
 
   std::vector<double> maps_x;
@@ -39,4 +39,4 @@ private:
   std::vector<double> m_next_y_vals;
 };
 
-#endif PLANNER_H
+#endif //PLANNER_H

@@ -42,4 +42,4 @@ private:
   State m_state;
 };
 
-#endif FSM_H
+#endif //FSM_H

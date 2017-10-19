@@ -140,7 +140,7 @@ State FSM::get_next_state(VehiclePredictions predictions)
   for (auto state : states)
   {
     VehiclePredictions predictions_copy(predictions);
-    vector<Snapshot> trajectory = trajectory_for_state(state, predictions_copy, 10);
+    vector<Snapshot> trajectory = trajectory_for_state(state, predictions_copy, 20);
     CostFunction cf;
     double cost = cf.calculate_cost(trajectory, predictions);
     cout << "cost for state " << state << " = " << cost << endl;

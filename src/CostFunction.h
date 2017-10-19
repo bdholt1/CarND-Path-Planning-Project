@@ -8,31 +8,25 @@
 
 
 struct TrajectoryData {
-  TrajectoryData(int proposed_lane,
-                 double avg_speed,
-                 double max_acceleration,
-                 double rms_acceleration,
+  TrajectoryData(int current_lane,
+                 int target_lane,
+                 double average_speed,
+                 double target_speed,
                  double closest_approach,
-                 double end_distance_to_goal,
-                 int end_lanes_from_goal,
                  int collides)
-  : _proposed_lane(proposed_lane)
-  , _avg_speed(avg_speed)
-  , _max_acceleration(max_acceleration)
-  , _rms_acceleration(rms_acceleration)
+  : _current_lane(current_lane)
+  , _target_lane(target_lane)
+  , _average_speed(average_speed)
+  , _target_speed(target_speed)
   , _closest_approach(closest_approach)
-  , _end_distance_to_goal(end_distance_to_goal)
-  , _end_lanes_from_goal(end_lanes_from_goal)
   , _collides(collides)
   {}
 
-  int _proposed_lane;
-  double _avg_speed;
-  double _max_acceleration;
-  double _rms_acceleration;
+  int _current_lane;
+  int _target_lane;
+  double _average_speed;
+  double _target_speed;
   double _closest_approach;
-  double _end_distance_to_goal;
-  int _end_lanes_from_goal;
   int _collides;
 };
 
@@ -50,7 +44,8 @@ private:
 
   TrajectoryData get_helper_data(const std::vector<Snapshot >& trajectory, const VehiclePredictions &predictions);
 
+  bool check_collision(Snapshot& snapshot, int s_previous, int s_now);
   VehiclePredictions filter_predictions_by_lane(const VehiclePredictions &predictions, int lane);
 };
 
-#endif COST_FUNCTION_H
+#endif //COST_FUNCTION_H

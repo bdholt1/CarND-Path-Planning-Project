@@ -33,4 +33,4 @@ struct Snapshot {
   State m_state;
 };
 
-#endif SNAPSHOT_H
+#endif //SNAPSHOT_H

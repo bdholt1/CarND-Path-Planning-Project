@@ -13,6 +13,7 @@ public:
   int get_lane() const { return m_lane;};
   void set_lane(int lane) {m_lane = lane;};
   double get_speed() const {return m_v;};
+  double get_s() const {return m_s;};
 
   void update(double s, double d, double speed, double t);
   std::vector<Vehicle> generate_predictions(double interval, int horizon);
@@ -34,4 +35,4 @@ private:
   int m_lane;
 };
 
-#endif
+#endif //VEHICLE_H
