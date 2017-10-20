@@ -6,8 +6,6 @@
 
 #include "vehicle.h"
 
-using VehiclePredictions = std::map<int, std::vector <std::vector<int> > >;
-
 enum State {
  CS = 0,
  KL,

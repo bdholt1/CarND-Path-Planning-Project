@@ -33,19 +33,19 @@ struct TrajectoryData {
 class CostFunction
 {
 public:
-  double calculate_cost(const std::vector<Snapshot> &trajectory, const VehiclePredictions &predictions);
+  double calculate_cost(const std::vector<Snapshot> &trajectory, const std::map<int, std::vector<Prediction>> &predictions);
 
 private:
-  double change_lane_cost(const std::vector<Snapshot> &trajectory, const VehiclePredictions &predictions, const TrajectoryData &data);
-  double distance_from_goal_lane(const std::vector<Snapshot> &trajectory, const VehiclePredictions &predictions, const TrajectoryData &data);
-  double inefficiency_cost(const std::vector<Snapshot> &trajectory, const VehiclePredictions &predictions, const TrajectoryData &data);
-  double collision_cost(const std::vector<Snapshot> &trajectory, const VehiclePredictions &predictions, const TrajectoryData &data);
-  double buffer_cost(const std::vector<Snapshot> &trajectory, const VehiclePredictions &predictions, const TrajectoryData &data);
+  double change_lane_cost(const std::vector<Snapshot> &trajectory, const std::map<int, std::vector<Prediction>> &predictions, const TrajectoryData &data);
+  double distance_from_goal_lane(const std::vector<Snapshot> &trajectory, const std::map<int, std::vector<Prediction>> &predictions, const TrajectoryData &data);
+  double inefficiency_cost(const std::vector<Snapshot> &trajectory, const std::map<int, std::vector<Prediction>> &predictions, const TrajectoryData &data);
+  double collision_cost(const std::vector<Snapshot> &trajectory, const std::map<int, std::vector<Prediction>> &predictions, const TrajectoryData &data);
+  double buffer_cost(const std::vector<Snapshot> &trajectory, const std::map<int, std::vector<Prediction>> &predictions, const TrajectoryData &data);
 
-  TrajectoryData get_helper_data(const std::vector<Snapshot >& trajectory, const VehiclePredictions &predictions);
+  TrajectoryData get_helper_data(const std::vector<Snapshot >& trajectory, const std::map<int, std::vector<Prediction>> &predictions);
 
   bool check_collision(Snapshot& snapshot, int s_previous, int s_now);
-  VehiclePredictions filter_predictions_by_lane(const VehiclePredictions &predictions, int lane);
+  std::map<int, std::vector<Prediction>> filter_predictions_by_lane(const std::map<int, std::vector<Prediction>> &prediction, int lane);
 };
 
 #endif //COST_FUNCTION_H

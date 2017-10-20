@@ -15,11 +15,6 @@ using namespace std;
 // for convenience
 using json = nlohmann::json;
 
-// For converting back and forth between radians and degrees.
-constexpr double pi() { return M_PI; }
-double deg2rad(double x) { return x * pi() / 180; }
-double rad2deg(double x) { return x * 180 / pi(); }
-
 // Checks if the SocketIO event has JSON data.
 // If there is data the JSON object in string format will be returned,
 // else the empty string "" will be returned.
@@ -93,15 +88,15 @@ int main() {
             vector<double> previous_path_y = j[1]["previous_path_y"];
             double end_path_s = j[1]["end_path_s"];
             double end_path_d = j[1]["end_path_d"];
+            // The data format for each car is: [ id, x, y, vx, vy, s, d].
             vector<vector<double>> sensor_fusion = j[1]["sensor_fusion"];
 
-			planner.update(sensor_fusion, car_s, car_d, car_speed);
-
-			planner.generate_trajectory(previous_path_x, previous_path_y);
+            planner.update(sensor_fusion, car_x, car_y, car_s, car_d, car_yaw, car_speed);
+            planner.generate_trajectory(previous_path_x, previous_path_y);
 
             json msgJson;
-			msgJson["next_x"] = planner.next_x_values();
-			msgJson["next_y"] = planner.next_y_values();
+            msgJson["next_x"] = planner.next_x_values();
+            msgJson["next_y"] = planner.next_y_values();
 
             auto msg = "42[\"control\","+ msgJson.dump()+"]";
 

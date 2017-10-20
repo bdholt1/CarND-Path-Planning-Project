@@ -15,12 +15,12 @@ FSM::FSM(const Vehicle& ego, int lanes_available)
   m_state = State::CS;
 }
 
-void FSM::update_ego(double ego_s, double ego_d, double ego_speed, double t)
+void FSM::update_ego(double x, double y, double s, double d, double yaw, double speed, double t)
 {
-  m_ego.update(ego_s, ego_d, ego_speed, t);
+  m_ego.update(x, y, s, d, yaw, speed, t);
 }
 
-void FSM::update_state(VehiclePredictions predictions)
+void FSM::update_state(const std::map<int, std::vector<Prediction>> &predictions)
 {
     /*
     Updates the "state" of the vehicle by assigning one of the
@@ -58,7 +58,7 @@ void FSM::update_state(VehiclePredictions predictions)
     m_state = get_next_state(predictions);
 }
 
-void FSM::realize_state(VehiclePredictions predictions)
+void FSM::realize_state(const std::map<int, std::vector<Prediction>> &predictions)
 {
   /*
   Given a state, realize it by adjusting acceleration and lane.
@@ -87,7 +87,7 @@ void FSM::realize_state(VehiclePredictions predictions)
   }
 }
 
-State FSM::get_next_state(VehiclePredictions predictions)
+State FSM::get_next_state(const std::map<int, std::vector<Prediction>> &predictions)
 {
   vector<State> states;
   if (m_state == State::PLCR)
@@ -117,12 +117,12 @@ State FSM::get_next_state(VehiclePredictions predictions)
   else {
     // Keep lane can continue ...
     states.push_back(State::KL);
-    if (ego_lane() < m_lanes_available - 1)
+    if (ego().lane() < m_lanes_available - 1)
     {
       // ... or prepare to change right
       states.push_back(State::PLCR);
     }
-    if (ego_lane() > 0)
+    if (ego().lane() > 0)
     {
       // ... or prepare to change left
       states.push_back(State::PLCL);
@@ -139,7 +139,7 @@ State FSM::get_next_state(VehiclePredictions predictions)
   vector<StateCostPair> costs;
   for (auto state : states)
   {
-    VehiclePredictions predictions_copy(predictions);
+    std::map<int, std::vector<Prediction>> predictions_copy(predictions);
     vector<Snapshot> trajectory = trajectory_for_state(state, predictions_copy, 20);
     CostFunction cf;
     double cost = cf.calculate_cost(trajectory, predictions);
@@ -163,22 +163,22 @@ void FSM::realize_constant_speed()
 {
 }
 
-void FSM::realize_keep_lane(VehiclePredictions predictions)
+void FSM::realize_keep_lane(const std::map<int, std::vector<Prediction>> &predictions)
 {
   // stay in the same lane
-  m_new_lane = ego_lane();
+  m_new_lane = ego().lane();
 
 
 }
 
-void FSM::realize_lane_change(VehiclePredictions predictions, string direction)
+void FSM::realize_lane_change(const std::map<int, std::vector<Prediction>> &predictions, string direction)
 {
   int delta = 1;
   if (direction.compare("L") == 0)
   {
     delta = -1;
   }
-  int lane = m_ego.get_lane() + delta;
+  int lane = m_ego.lane() + delta;
   // realise the lane change
   m_ego.set_lane(lane);
   int m_new_lane = lane;
@@ -186,21 +186,21 @@ void FSM::realize_lane_change(VehiclePredictions predictions, string direction)
 
 }
 
-void FSM::realize_prep_lane_change(VehiclePredictions predictions, string direction)
+void FSM::realize_prep_lane_change(const std::map<int, std::vector<Prediction>> &predictions, string direction)
 {
   int delta = 1;
   if (direction.compare("L") == 0)
   {
     delta = -1;
   }
-  int lane = m_ego.get_lane() + delta;
+  int lane = m_ego.lane() + delta;
   // prepare for lane change
   int m_new_lane = lane;
 
 }
 
 
-vector< Snapshot > FSM::trajectory_for_state(State state, VehiclePredictions predictions, int horizon)
+vector< Snapshot > FSM::trajectory_for_state(State state, const std::map<int, std::vector<Prediction>> &predictions, int horizon)
 {
   // remember current state
   Snapshot s = take_snapshot();
@@ -214,8 +214,8 @@ vector< Snapshot > FSM::trajectory_for_state(State state, VehiclePredictions pre
     // pretend to be in new proposed state
     m_state = state;
     realize_state(predictions);
-    assert(0 <= ego_lane());
-    assert(ego_lane() < m_lanes_available);
+    assert(0 <= ego().lane());
+    assert(ego().lane() < m_lanes_available);
     m_ego.increment(i * INTERVAL);
     trajectory.push_back(take_snapshot());
 

@@ -3,9 +3,15 @@
 #include "spline.h"
 #include "trajectory.h"
 
+#include <cassert>
 #include <cmath>
 
 using namespace std;
+
+// For converting back and forth between radians and degrees.
+constexpr double pi() { return M_PI; }
+double deg2rad(double x) { return x * pi() / 180; }
+double rad2deg(double x) { return x * 180 / pi(); }
 
 Planner::Planner(int num_lanes)
 : m_fsm(Vehicle{-1}, num_lanes)
@@ -22,15 +28,15 @@ void Planner::add_waypoint(double x, double y, double s, double d_x, double d_y)
   maps_dy.push_back(d_y);
 }
 
-void Planner::update(std::vector<std::vector<double>> sensor_fusion, double ego_s, double ego_d, double ego_speed)
+void Planner::update(vector<vector<double>> sensor_fusion, double car_x, double car_y, double car_s, double car_d, double car_yaw, double car_speed)
 {
   chrono::system_clock::time_point new_time = chrono::high_resolution_clock::now();
-  chrono::duration<double, std::milli> fp_ms = new_time - m_time;
+  chrono::duration<double, milli> fp_ms = new_time - m_time;
 
   double t = fp_ms.count() / 1000;
   m_time = new_time;
 
-  m_fsm.update_ego(ego_s, ego_d, ego_speed, t);
+  m_fsm.update_ego(car_x, car_y, car_s, car_d, car_yaw, car_speed, t);
 
   m_predictions.clear();
   for (auto vec : sensor_fusion)
@@ -42,38 +48,38 @@ void Planner::update(std::vector<std::vector<double>> sensor_fusion, double ego_
     double vy = vec[4];
     double s = vec[5];
     double d = vec[6];
+    double yaw = 0.0;
 
     if (m_vehicles.find(id) == m_vehicles.end())
     {
       Vehicle v(id);
-      v.update(s, d, sqrt(vx*vx + vy*vy), t);
+      v.update(x, y, s, d, yaw, sqrt(vx*vx + vy*vy), t);
       m_vehicles[id] = v;
     }
     else
     {
-      m_vehicles[id].update(s, d, sqrt(vx*vx + vy*vy), t);
+      m_vehicles[id].update(x, y, s, d, yaw, sqrt(vx*vx + vy*vy), t);
     }
 
-    vector<Vehicle> preds = m_vehicles[id].generate_predictions(INTERVAL, 20);
-    m_predictions[id] = preds;
-    }
+    m_predictions[id] = m_vehicles[id].generate_predictions(INTERVAL, 20);
   }
-
 }
 
-void Planner::generate_trajectory(std::vector<double> previous_path_x, std::vector<double> previous_path_y);
+void Planner::generate_trajectory(vector<double> previous_path_x, vector<double> previous_path_y)
 {
-  fsm.update_state(vehicle_predictions);
-  fsm.realize_state(vehicle_predictions);
+  m_fsm.update_state(m_predictions);
+  m_fsm.realize_state(m_predictions);
 
-  double target_lane = fsm.ego_lane();
-  double target_speed = fsm.ego_speed();
+  double target_lane = m_fsm.ego().lane();
+  double target_speed = m_fsm.ego().speed();
 
   int next_wp = -1;
-  double ref_x = car_x;
-  double ref_y = car_y;
-  double ref_yaw = deg2rad(car_yaw);
+  double ref_x = m_fsm.ego().x();
+  double ref_y = m_fsm.ego().y();
+  double ref_yaw = deg2rad(m_fsm.ego().yaw());
 
+  size_t prev_size = previous_path_x.size();
+  assert(previous_path_y.size() == prev_size);
 
   if(prev_size < 2)
   {
@@ -336,3 +342,4 @@ vector<double> Planner::getXY(double s, double d) const
     return {x,y};
 
 }
+

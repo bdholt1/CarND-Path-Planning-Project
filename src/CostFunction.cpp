@@ -17,7 +17,7 @@ const double INTERVAL = 0.02;
 
 using namespace std;
 
-double CostFunction::calculate_cost(const std::vector<Snapshot> &trajectory, const VehiclePredictions &predictions)
+double CostFunction::calculate_cost(const std::vector<Snapshot> &trajectory, const std::map<int, std::vector<Prediction>> &predictions)
 {
   TrajectoryData trajectory_data = get_helper_data(trajectory, predictions);
   double cost = 0.0;
@@ -30,7 +30,7 @@ double CostFunction::calculate_cost(const std::vector<Snapshot> &trajectory, con
   return cost;
 }
 
-double CostFunction::change_lane_cost(const std::vector<Snapshot> &trajectory, const VehiclePredictions &predictions, const TrajectoryData &data)
+double CostFunction::change_lane_cost(const std::vector<Snapshot> &trajectory, const std::map<int, std::vector<Prediction>> &predictions, const TrajectoryData &data)
 {
   // Penalises being in the wrong lane
   double cost = 0.0;
@@ -42,7 +42,7 @@ double CostFunction::change_lane_cost(const std::vector<Snapshot> &trajectory, c
   return cost;
 }
 
-double CostFunction::inefficiency_cost(const std::vector<Snapshot> &trajectory, const VehiclePredictions &predictions, const TrajectoryData &data)
+double CostFunction::inefficiency_cost(const std::vector<Snapshot> &trajectory, const std::map<int, std::vector<Prediction>> &predictions, const TrajectoryData &data)
 {
   double speed = data._average_speed;
   double target_speed = data._target_speed;
@@ -54,7 +54,7 @@ double CostFunction::inefficiency_cost(const std::vector<Snapshot> &trajectory, 
   return cost;
 }
 
-double CostFunction::collision_cost(const std::vector<Snapshot> &trajectory, const VehiclePredictions &predictions, const TrajectoryData &data)
+double CostFunction::collision_cost(const std::vector<Snapshot> &trajectory, const std::map<int, std::vector<Prediction>> &predictions, const TrajectoryData &data)
 {
   double cost = 0.0;
   if (data._collides != -1)
@@ -68,7 +68,7 @@ double CostFunction::collision_cost(const std::vector<Snapshot> &trajectory, con
   return cost;
 }
 
-double CostFunction::buffer_cost(const std::vector<Snapshot> &trajectory, const VehiclePredictions &predictions, const TrajectoryData &data)
+double CostFunction::buffer_cost(const std::vector<Snapshot> &trajectory, const std::map<int, std::vector<Prediction>> &predictions, const TrajectoryData &data)
 {
   double closest = data._closest_approach;
   double cost = 0.0;
@@ -92,7 +92,7 @@ double CostFunction::buffer_cost(const std::vector<Snapshot> &trajectory, const 
   return cost;
 }
 
-TrajectoryData CostFunction::get_helper_data(const std::vector<Snapshot> &trajectory, const VehiclePredictions &predictions)
+TrajectoryData CostFunction::get_helper_data(const std::vector<Snapshot> &trajectory, const std::map<int, std::vector<Prediction>> &predictions)
 {
   Snapshot current_snapshot = trajectory[0];
   Snapshot first = trajectory[1];
@@ -102,13 +102,13 @@ TrajectoryData CostFunction::get_helper_data(const std::vector<Snapshot> &trajec
   int current_lane = first.m_new_lane;
   int target_lane = last.m_new_lane;
   double target_speed = last.m_target_speed;
-  double average_speed = (last.m_ego.get_speed()*dt - current_snapshot.m_ego.get_speed()) / dt;
+  double average_speed = (last.m_ego.speed()*dt - current_snapshot.m_ego.speed()) / dt;
 
   // initialize a bunch of variables
   double closest_approach = 999999;
   int collides = -1;
-  VehiclePredictions current_lane_filtered = filter_predictions_by_lane(predictions, current_lane);
-  VehiclePredictions target_lane_filtered = filter_predictions_by_lane(predictions, target_lane);
+  std::map<int, std::vector<Prediction>> current_lane_filtered = filter_predictions_by_lane(predictions, current_lane);
+  std::map<int, std::vector<Prediction>> target_lane_filtered = filter_predictions_by_lane(predictions, target_lane);
 
 
   for (std::size_t i = 1; i < PLANNING_HORIZON+1; ++i)
@@ -119,13 +119,13 @@ TrajectoryData CostFunction::get_helper_data(const std::vector<Snapshot> &trajec
     for (auto& kv : target_lane_filtered)
     {
       int v_id = kv.first;
-      vector < vector<int> > predicted_traj = kv.second;
-      vector<int> state = predicted_traj[i];
-      vector<int> last_state = predicted_traj[i-1];
-      bool vehicle_collides = check_collision(snapshot, last_state[1], state[1]);
+      vector<Prediction> predicted_traj = kv.second;
+      Prediction pred = predicted_traj[i];
+      Prediction prev_pred = predicted_traj[i-1];
+      bool vehicle_collides = check_collision(snapshot, prev_pred.s, pred.s);
       if (vehicle_collides)
         collides = i;
-      int dist = std::abs(state[1] - current_snapshot.m_ego.get_s());
+      int dist = std::abs(pred.s - current_snapshot.m_ego.s());
       if (dist < closest_approach)
         closest_approach = dist;
     }
@@ -144,8 +144,8 @@ TrajectoryData CostFunction::get_helper_data(const std::vector<Snapshot> &trajec
 
 bool CostFunction::check_collision(Snapshot& snapshot, int s_previous, int s_now)
 {
-  int s = snapshot.m_ego.get_s();
-  int v = snapshot.m_ego.get_speed();
+  int s = snapshot.m_ego.s();
+  int v = snapshot.m_ego.speed();
   int v_target = s_now - s_previous;
   if (s_previous < s)
   {
@@ -173,15 +173,15 @@ bool CostFunction::check_collision(Snapshot& snapshot, int s_previous, int s_now
 }
 
 
-VehiclePredictions CostFunction::filter_predictions_by_lane(const VehiclePredictions &predictions, int lane)
+std::map<int, std::vector<Prediction>> CostFunction::filter_predictions_by_lane(const std::map<int, std::vector<Prediction>> &predictions, int lane)
 {
-  VehiclePredictions filtered;
+  std::map<int, std::vector<Prediction>> filtered;
 
   for (auto& kv : predictions)
   {
     int v_id = kv.first;
-    vector<vector<int>> predicted_traj = kv.second;
-    if (predicted_traj[0][0] == lane and v_id != -1)
+    vector<Prediction> predicted_traj = kv.second;
+    if (predicted_traj[0].lane == lane and v_id != -1)
     {
       filtered[v_id] = predicted_traj;
     }

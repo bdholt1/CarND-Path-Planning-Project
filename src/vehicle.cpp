@@ -16,18 +16,21 @@ Vehicle::~Vehicle()
 {
 }
 
-void Vehicle::update(double s, double d, double speed, double t)
+void Vehicle::update(double x, double y, double s, double d, double yaw, double speed, double t)
 {
+  m_x = x;
+  m_y = y;
   m_s = s;
   m_d = d;
   m_lane = d/4;
-  m_a = (m_v - speed) / t;
-  m_v = speed;
+  m_yaw = yaw;
+  m_a = (m_speed - speed) / t;
+  m_speed = speed;
 }
 
-vector<Vehicle> Vehicle::generate_predictions(double interval, int horizon)
+vector<Prediction> Vehicle::generate_predictions(double interval, int horizon)
 {
-  vector<Vehicle> predictions;
+  vector<Prediction> predictions;
     for (int i = 0; i < horizon; ++i)
     {
       predictions.push_back(state_at(i*interval));
@@ -60,10 +63,13 @@ bool Vehicle::is_close(const Vehicle& other)
 
 std::ostream& Vehicle::display(std::ostream& os)
 {
+  os << "x:     " << m_x << "\n";
+  os << "y:     " << m_y << "\n";
   os << "s:     " << m_s << "\n";
   os << "d:     " << m_d << "\n";
   os << "lane:  " << m_lane << "\n";
-  os << "speed: " << m_v << "\n";
+  os << "yaw: " << m_yaw << "\n";
+  os << "speed: " << m_speed << "\n";
   os << "a:     " << m_a << "\n";
   return os;
 }
@@ -71,17 +77,17 @@ std::ostream& Vehicle::display(std::ostream& os)
 
 void Vehicle::increment(double dt)
 {
-  m_s += m_v * dt;
-  m_v += m_a * dt;
+  m_s += m_speed * dt + m_a * dt * dt / 2;
+  m_speed += m_a * dt;
 }
 
-Vehicle Vehicle::state_at(double t)
+Prediction Vehicle::state_at(double dt)
 {
 
-  int s = m_s + m_v * t + m_a * t * t / 2;
-  int v = m_v + m_a * t;
-  Vehicle vehicle(m_id);
-  vehicle.update(s, m_d, v, t);
-  return vehicle;
+  int s = m_s + m_speed * dt + m_a * dt * dt / 2;
+  Prediction prediction;
+  prediction.s = s;
+  prediction.lane = m_lane;
+  return prediction;
 }
 

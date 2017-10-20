@@ -16,7 +16,7 @@ public:
 
   void add_waypoint(double x, double y, double s, double d_x, double d_y);
 
-  void update(std::vector<std::vector<double>> sensor_fusion, double ego_s, double ego_d, double ego_speed);
+  void update(std::vector<std::vector<double>> sensor_fusion, double x, double y, double s, double d, double yaw, double speed);
 
   void generate_trajectory(std::vector<double> previous_path_x, std::vector<double> previous_path_y);
 
@@ -26,7 +26,7 @@ public:
 private:
   FSM m_fsm;
   std::map<int, Vehicle> m_vehicles;
-  VehiclePredictions m_predictions;
+  std::map<int, std::vector<Prediction>> m_predictions;
   std::chrono::system_clock::time_point m_time;
 
   std::vector<double> maps_x;
