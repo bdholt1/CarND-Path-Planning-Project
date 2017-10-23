@@ -16,7 +16,7 @@ double rad2deg(double x) { return x * 180 / pi(); }
 Planner::Planner(int num_lanes)
 : m_fsm(Vehicle{-1}, num_lanes)
 {
-  m_time = chrono::high_resolution_clock::now();
+  m_time = chrono::system_clock::now();
 }
 
 void Planner::add_waypoint(double x, double y, double s, double d_x, double d_y)
@@ -30,7 +30,7 @@ void Planner::add_waypoint(double x, double y, double s, double d_x, double d_y)
 
 void Planner::update(vector<vector<double>> sensor_fusion, double car_x, double car_y, double car_s, double car_d, double car_yaw, double car_speed)
 {
-  chrono::system_clock::time_point new_time = chrono::high_resolution_clock::now();
+  chrono::system_clock::time_point new_time = chrono::system_clock::now();
   chrono::duration<double, milli> fp_ms = new_time - m_time;
 
   double t = fp_ms.count() / 1000;
@@ -82,7 +82,7 @@ void Planner::generate_trajectory(vector<double> previous_path_x, vector<double>
   double ref_y = m_fsm.ego().y();
   double ref_yaw = deg2rad(m_fsm.ego().yaw());
   double ref_lane = m_fsm.ego().lane();
-  double ref_speed = m_fsm.ego().speed();
+  double ref_vel = m_fsm.ego().speed();
 
   size_t prev_size = previous_path_x.size();
   assert(previous_path_y.size() == prev_size);
@@ -122,9 +122,9 @@ void Planner::generate_trajectory(vector<double> previous_path_x, vector<double>
     car_speed = distance(ref_x, ref_y, ref_x_prev, ref_y_prev) / INTERVAL;
   }
 
-  vector<double> next_wp0 = getXY(car_s + 30, 2 + 4.0*lane);
-  vector<double> next_wp1 = getXY(car_s + 60, 2 + 4.0*target_lane);
-  vector<double> next_wp2 = getXY(car_s + 90, 2 + 4.0*target_lane);
+  vector<double> next_wp0 = getXY(car_s + 30, 2 + 4.0*ref_lane);
+  vector<double> next_wp1 = getXY(car_s + 60, 2 + 4.0*ref_lane);
+  vector<double> next_wp2 = getXY(car_s + 90, 2 + 4.0*ref_lane);
 
   ptsx.push_back(next_wp0[0]);
   ptsx.push_back(next_wp1[0]);
@@ -194,12 +194,6 @@ void Planner::generate_trajectory(vector<double> previous_path_x, vector<double>
     m_next_y_vals.push_back(y_point);
   }
 
-  int prev_size = previous_path_x.size();
-
-  if (prev_size > 0)
-  {
-    car_s = end_path_s;
-  }
 
 }
 
@@ -231,7 +225,7 @@ int Planner::ClosestWaypoint(double x, double y) const
 int Planner::NextWaypoint(double x, double y, double theta) const
 {
 
-    int closestWaypoint = ClosestWaypoint(x,y,maps_x,maps_y);
+    int closestWaypoint = ClosestWaypoint(x,y);
 
     double map_x = maps_x[closestWaypoint];
     double map_y = maps_y[closestWaypoint];
@@ -262,7 +256,7 @@ int Planner::NextWaypoint(double x, double y, double theta) const
 // Transform from Cartesian x,y coordinates to Frenet s,d coordinates
 vector<double> Planner::getFrenet(double x, double y, double theta) const
 {
-    int next_wp = NextWaypoint(x,y, theta, maps_x, maps_y, maps_dx, maps_dy);
+    int next_wp = NextWaypoint(x,y, theta);
 
     int prev_wp;
     prev_wp = next_wp-1;

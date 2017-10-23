@@ -12,6 +12,18 @@ Vehicle::Vehicle(int id)
 {
 }
 
+Vehicle::Vehicle(const Vehicle& rhs)
+: m_id(rhs.m_id)
+{
+}
+
+Vehicle& Vehicle::operator=(const Vehicle& rhs)
+{
+  m_id = rhs.m_id;
+  return *this;  
+}
+
+
 Vehicle::~Vehicle()
 {
 }

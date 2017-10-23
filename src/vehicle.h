@@ -14,6 +14,8 @@ class Vehicle
 {
 public:
   Vehicle(int id);
+  Vehicle(const Vehicle& rhs);
+  Vehicle& operator=(const Vehicle& rhs);
   virtual ~Vehicle();
 
   double x() const {return m_x;};
