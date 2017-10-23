@@ -16,6 +16,13 @@ using namespace std;
 
 // for convenience
 using json = nlohmann::json;
+ 
+const double LANE_WIDTH = 4.0; // lanes are 4m wide
+const double BUFFER = 40; // a safe buffer is 40m behind other vehicles
+const double TARGET_SPEED = 49.0;
+const double MAX_ACCELERATION =  0.224; // at 50Hz, this is around 5m/s^2
+const double TIME_INTERVAL = 0.02; // the sim operates at 50Hz
+const int LANES_AVAILABLE = 3;
 
 // For converting back and forth between radians and degrees.
 constexpr double pi() { return M_PI; }
@@ -63,11 +70,11 @@ int main() {
     map.add_waypoint(x, y, s, d_x, d_y);
   }
 
-  //start in lane 1;
-  int lane = 1;
+  int lane = 1; // current lane
   int lane_change_wp = 0;
+  double ref_vel = 0.0; // target vel (mph)
 
-  h.onMessage([&map,&lane,&lane_change_wp](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
+  h.onMessage([&map, &lane, &lane_change_wp, &ref_vel](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                      uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
@@ -98,15 +105,92 @@ int main() {
             double end_path_d = j[1]["end_path_d"];
             vector<vector<double>> sensor_fusion = j[1]["sensor_fusion"];
 
-
-            double ref_vel = 49.5; //mph
-
 	    int prev_size = previous_path_x.size();
 
 	    if (prev_size > 0)
 	    {
 	      car_s = end_path_s;
 	    }
+
+	    // start by assuming that we're not tool close
+	    bool too_close = false;
+	    bool emergency_brake = false;
+
+	    bool left_safe = (lane > 0); // initial value: left can only be safe if we're not in the leftmost lane
+	    bool right_safe = (lane < LANES_AVAILABLE-1); // initial value: right can only be safe if we're not in the right lane
+	    
+            for (auto vec : sensor_fusion)
+	    {
+	      double id = vec[0];
+	      double x = vec[1];
+	      double y = vec[2];
+	      double vx = vec[3];
+	      double vy = vec[4];
+	      double check_car_s = vec[5];
+	      double d = vec[6];
+              double check_speed = sqrt(vx*vx + vy*vy);
+
+	      // estimate where the car will be after the remaining waypoint have been visited
+	      check_car_s += prev_size*TIME_INTERVAL*check_speed;
+	      
+              // check if the vehicle is in our same lane
+              if (d < 4.0*(lane + 1) && d > 4.0*lane)
+	      {
+		if ((check_car_s > car_s) && (check_car_s - car_s < BUFFER))
+		{
+		    too_close = true;
+		}
+		if ((check_car_s > car_s) && (check_car_s - car_s < BUFFER/2))
+		{
+		    emergency_brake = true;
+		}		
+	      }
+
+	      if (((check_car_s > car_s) && (check_car_s - car_s < BUFFER)) ||
+		  ((car_s > check_car_s) && (car_s - check_car_s) < BUFFER/2))
+	      {
+		// if we are not in the leftmost lane and the vehicle is one lane to the left
+		if (d < 4.0*(lane) && d > 4.0*(lane - 1))
+		{
+		  left_safe = false;
+		}
+
+		// if we are not in the rightmost lane and the vehicle is one lane to the right
+		if (d < 4.0*(lane+2) && d > 4.0*(lane + 1))
+		{
+		  right_safe = false;
+		}
+	      }
+	    }
+
+            if (emergency_brake)
+	    {
+              ref_vel -= MAX_ACCELERATION*3;
+	    }
+	    else if (too_close)
+	    {
+	      // try a lane change, first try left
+	      if (left_safe)
+	      {
+		lane -= 1;
+	      }
+	      // then right
+	      else if (right_safe)
+	      {
+		lane += 1;
+	      }
+	      // and if neither are safe, then slow down
+	      else
+	      {
+		ref_vel -= MAX_ACCELERATION;
+	      }
+	    }
+	    else if (ref_vel < TARGET_SPEED)
+	    {
+              ref_vel += MAX_ACCELERATION;
+	    }
+
+	    cout << lane << " " << ref_vel << endl;
 	    
             int next_wp = -1;
             double ref_x = car_x;
