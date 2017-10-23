@@ -67,42 +67,33 @@ void Planner::update(vector<vector<double>> sensor_fusion, double car_x, double 
 
 void Planner::generate_trajectory(vector<double> previous_path_x, vector<double> previous_path_y)
 {
+  double car_x = m_fsm.ego().x();
+  double car_y = m_fsm.ego().y();
+  double car_s = m_fsm.ego().s();
+  double car_yaw = m_fsm.ego().yaw();
+  double car_speed = m_fsm.ego().speed();
+  int lane = m_fsm.ego().lane();
+
   m_fsm.update_state(m_predictions);
   m_fsm.realize_state(m_predictions);
-
-  double target_lane = m_fsm.ego().lane();
-  double target_speed = m_fsm.ego().speed();
 
   int next_wp = -1;
   double ref_x = m_fsm.ego().x();
   double ref_y = m_fsm.ego().y();
   double ref_yaw = deg2rad(m_fsm.ego().yaw());
+  double ref_lane = m_fsm.ego().lane();
+  double ref_speed = m_fsm.ego().speed();
 
   size_t prev_size = previous_path_x.size();
   assert(previous_path_y.size() == prev_size);
-
-  if(prev_size < 2)
-  {
-    next_wp = NextWaypoint(ref_x, ref_y, ref_yaw);
-  }
-  else
-  {
-    ref_x = previous_path_x[prev_size-1];
-    double ref_x_prev = previous_path_x[prev_size-2];
-    ref_y = previous_path_y[prev_size-1];
-    double ref_y_prev = previous_path_y[prev_size-2];
-    ref_yaw = atan2(ref_y-ref_y_prev,ref_x-ref_x_prev);
-    next_wp = NextWaypoint(ref_x,ref_y,ref_yaw);
-
-    car_speed = (sqrt((ref_x-ref_x_prev)*(ref_x-ref_x_prev)+(ref_y-ref_y_prev)*(ref_y-ref_y_prev))/.02)*2.237;
-  }
-
 
   vector<double> ptsx;
   vector<double> ptsy;
 
   if (prev_size < 2)
   {
+    next_wp = NextWaypoint(ref_x, ref_y, ref_yaw);
+
     double prev_car_x = car_x - cos(car_yaw);
     double prev_car_y = car_y - sin(car_yaw);
 
@@ -126,12 +117,14 @@ void Planner::generate_trajectory(vector<double> previous_path_x, vector<double>
     double ref_y_prev = previous_path_y[prev_size-2];
     ref_yaw = atan2(ref_y-ref_y_prev,ref_x-ref_x_prev);
 
-    car_speed = (sqrt((ref_x-ref_x_prev)*(ref_x-ref_x_prev)+(ref_y-ref_y_prev)*(ref_y-ref_y_prev))/.02)*2.237;
+    next_wp = NextWaypoint(ref_x, ref_y, ref_yaw);
+
+    car_speed = distance(ref_x, ref_y, ref_x_prev, ref_y_prev) / INTERVAL;
   }
 
-  vector<double> next_wp0 = getXY(car_s + 30, 2 + 4*lane, maps_s, maps_x, maps_y);
-  vector<double> next_wp1 = getXY(car_s + 60, 2 + 4*lane, maps_s, maps_x, maps_y);
-  vector<double> next_wp2 = getXY(car_s + 90, 2 + 4*lane, maps_s, maps_x, maps_y);
+  vector<double> next_wp0 = getXY(car_s + 30, 2 + 4.0*lane);
+  vector<double> next_wp1 = getXY(car_s + 60, 2 + 4.0*target_lane);
+  vector<double> next_wp2 = getXY(car_s + 90, 2 + 4.0*target_lane);
 
   ptsx.push_back(next_wp0[0]);
   ptsx.push_back(next_wp1[0]);
@@ -210,7 +203,7 @@ void Planner::generate_trajectory(vector<double> previous_path_x, vector<double>
 
 }
 
-double distance(double x1, double y1, double x2, double y2) const
+double Planner::distance(double x1, double y1, double x2, double y2) const
 {
     return sqrt((x2-x1)*(x2-x1)+(y2-y1)*(y2-y1));
 }

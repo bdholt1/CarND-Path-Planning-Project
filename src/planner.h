@@ -24,6 +24,12 @@ public:
   std::vector<double> next_y_values();
 
 private:
+  double distance(double x1, double y1, double x2, double y2) const;
+  int ClosestWaypoint(double x, double y) const;
+  int NextWaypoint(double x, double y, double theta) const;
+  std::vector<double> getFrenet(double x, double y, double theta) const;
+  std::vector<double> getXY(double s, double d) const;
+
   FSM m_fsm;
   std::map<int, Vehicle> m_vehicles;
   std::map<int, std::vector<Prediction>> m_predictions;
