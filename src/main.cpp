@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <fstream>
 #include <math.h>
 #include <uWS/uWS.h>
@@ -16,12 +17,13 @@ using namespace std;
 
 // for convenience
 using json = nlohmann::json;
- 
+
 const double LANE_WIDTH = 4.0; // lanes are 4m wide
 const double BUFFER = 40; // a safe buffer is 40m behind other vehicles
-const double TARGET_SPEED = 49.0;
+const double TARGET_SPEED = 49.5;
 const double MAX_ACCELERATION =  0.224; // at 50Hz, this is around 5m/s^2
 const double TIME_INTERVAL = 0.02; // the sim operates at 50Hz
+const double MS_TO_MPH = 2.237;
 const int LANES_AVAILABLE = 3;
 
 // For converting back and forth between radians and degrees.
@@ -53,7 +55,7 @@ int main() {
   ifstream in_map_(map_file_.c_str(), ifstream::in);
 
   Map map;
-  
+
   string line;
   while (getline(in_map_, line)) {
     istringstream iss(line);
@@ -105,93 +107,97 @@ int main() {
             double end_path_d = j[1]["end_path_d"];
             vector<vector<double>> sensor_fusion = j[1]["sensor_fusion"];
 
-	    int prev_size = previous_path_x.size();
+            int prev_size = previous_path_x.size();
 
-	    if (prev_size > 0)
-	    {
-	      car_s = end_path_s;
-	    }
+            if (prev_size > 0)
+            {
+              car_s = end_path_s;
+            }
 
-	    // start by assuming that we're not tool close
-	    bool too_close = false;
-	    bool emergency_brake = false;
+            // start by assuming that we're not too close
+            bool too_close = false;
+            bool emergency_brake = false;
 
-	    bool left_safe = (lane > 0); // initial value: left can only be safe if we're not in the leftmost lane
-	    bool right_safe = (lane < LANES_AVAILABLE-1); // initial value: right can only be safe if we're not in the right lane
-	    
+            bool left_safe = (lane > 0); // initial value: left can only be safe if we're not in the leftmost lane
+            bool right_safe = (lane < LANES_AVAILABLE-1); // initial value: right can only be safe if we're not in the right lane
+
             for (auto vec : sensor_fusion)
-	    {
-	      double id = vec[0];
-	      double x = vec[1];
-	      double y = vec[2];
-	      double vx = vec[3];
-	      double vy = vec[4];
-	      double check_car_s = vec[5];
-	      double d = vec[6];
+            {
+              double id = vec[0];
+              double x = vec[1];
+              double y = vec[2];
+              double vx = vec[3];
+              double vy = vec[4];
+              double check_car_s = vec[5];
+              double d = vec[6];
               double check_speed = sqrt(vx*vx + vy*vy);
 
-	      // estimate where the car will be after the remaining waypoint have been visited
-	      check_car_s += prev_size*TIME_INTERVAL*check_speed;
-	      
+              // estimate where the car will be after the remaining waypoint have been visited
+              check_car_s += prev_size*TIME_INTERVAL*check_speed;
+
               // check if the vehicle is in our same lane
-              if (d < 4.0*(lane + 1) && d > 4.0*lane)
-	      {
-		if ((check_car_s > car_s) && (check_car_s - car_s < BUFFER))
-		{
-		    too_close = true;
-		}
-		if ((check_car_s > car_s) && (check_car_s - car_s < BUFFER/2))
-		{
-		    emergency_brake = true;
-		}		
-	      }
+              if (d < LANE_WIDTH*(lane + 1) && d > LANE_WIDTH*lane)
+              {
+                if ((check_car_s > car_s) && (check_car_s - car_s < BUFFER))
+                {
+                    too_close = true;
+                }
+                if ((check_car_s > car_s) && (check_car_s - car_s < BUFFER/2))
+                {
+                    emergency_brake = true;
+                }
+              }
 
-	      if (((check_car_s > car_s) && (check_car_s - car_s < BUFFER)) ||
-		  ((car_s > check_car_s) && (car_s - check_car_s) < BUFFER/2))
-	      {
-		// if we are not in the leftmost lane and the vehicle is one lane to the left
-		if (d < 4.0*(lane) && d > 4.0*(lane - 1))
-		{
-		  left_safe = false;
-		}
+              if (((check_car_s > car_s) && (check_car_s - car_s < BUFFER*1.5)) ||
+                  ((car_s > check_car_s) && (car_s - check_car_s) < BUFFER/2))
+              {
+                // if we are not in the leftmost lane and the vehicle is one lane to the left
+                if (d < LANE_WIDTH*(lane) && d > LANE_WIDTH*(lane - 1))
+                {
+                  left_safe = false;
+                }
 
-		// if we are not in the rightmost lane and the vehicle is one lane to the right
-		if (d < 4.0*(lane+2) && d > 4.0*(lane + 1))
-		{
-		  right_safe = false;
-		}
-	      }
-	    }
+                // if we are not in the rightmost lane and the vehicle is one lane to the right
+                if (d < LANE_WIDTH*(lane+2) && d > LANE_WIDTH*(lane + 1))
+                {
+                  right_safe = false;
+                }
+              }
+            }
 
             if (emergency_brake)
-	    {
+            {
               ref_vel -= MAX_ACCELERATION*3;
-	    }
-	    else if (too_close)
-	    {
-	      // try a lane change, first try left
-	      if (left_safe)
-	      {
-		lane -= 1;
-	      }
-	      // then right
-	      else if (right_safe)
-	      {
-		lane += 1;
-	      }
-	      // and if neither are safe, then slow down
-	      else
-	      {
-		ref_vel -= MAX_ACCELERATION;
-	      }
-	    }
-	    else if (ref_vel < TARGET_SPEED)
-	    {
+            }
+            else if (too_close)
+            {
+              // try a lane change, first try left
+              if (left_safe)
+              {
+                lane -= 1;
+              }
+              // then right
+              else if (right_safe)
+              {
+                lane += 1;
+              }
+              // and if neither are safe, then slow down
+              else
+              {
+                ref_vel -= MAX_ACCELERATION;
+              }
+            }
+            else if (ref_vel < TARGET_SPEED)
+            {
               ref_vel += MAX_ACCELERATION;
-	    }
+            }
 
-	    cout << lane << " " << ref_vel << endl;
-	    
+            // normalise ref_vel to be between (0, TARGET_SPEED)
+            // to ensure we don't try to reverse or exceed the speed limit
+            ref_vel = max(0.0, min(ref_vel, TARGET_SPEED));
+
+            cout << lane << " " << ref_vel << endl;
+
             int next_wp = -1;
             double ref_x = car_x;
             double ref_y = car_y;
@@ -200,7 +206,7 @@ int main() {
 
             if(prev_size < 2)
             {
-	      next_wp = map.NextWaypoint(ref_x, ref_y, ref_yaw);
+              next_wp = map.NextWaypoint(ref_x, ref_y, ref_yaw);
             }
             else
             {
@@ -213,7 +219,7 @@ int main() {
 
                 car_s = end_path_s;
 
-                car_speed = (sqrt((ref_x-ref_x_prev)*(ref_x-ref_x_prev)+(ref_y-ref_y_prev)*(ref_y-ref_y_prev))/.02)*2.237;
+                car_speed = Map::distance(ref_x, ref_y, ref_x_prev, ref_y_prev)/TIME_INTERVAL*MS_TO_MPH;
             }
 
 
@@ -245,12 +251,12 @@ int main() {
               double ref_y_prev = previous_path_y[prev_size-2];
               ref_yaw = atan2(ref_y-ref_y_prev,ref_x-ref_x_prev);
 
-              car_speed = (sqrt((ref_x-ref_x_prev)*(ref_x-ref_x_prev)+(ref_y-ref_y_prev)*(ref_y-ref_y_prev))/.02)*2.237;
+              car_speed = Map::distance(ref_x, ref_y, ref_x_prev, ref_y_prev)/TIME_INTERVAL*MS_TO_MPH;
             }
 
-            vector<double> next_wp0 = map.getXY(car_s + 30, 2 + 4*lane);
-            vector<double> next_wp1 = map.getXY(car_s + 60, 2 + 4*lane);
-            vector<double> next_wp2 = map.getXY(car_s + 90, 2 + 4*lane);
+            vector<double> next_wp0 = map.getXY(car_s + 30, 2 + LANE_WIDTH*lane);
+            vector<double> next_wp1 = map.getXY(car_s + 60, 2 + LANE_WIDTH*lane);
+            vector<double> next_wp2 = map.getXY(car_s + 90, 2 + LANE_WIDTH*lane);
 
             ptsx.push_back(next_wp0[0]);
             ptsx.push_back(next_wp1[0]);
@@ -293,14 +299,14 @@ int main() {
             {
               if(ref_vel > car_speed)
               {
-                car_speed+=.224;
+                car_speed += MAX_ACCELERATION;
               }
               else if(ref_vel < car_speed)
               {
-                car_speed-=.224;
+                car_speed -= MAX_ACCELERATION;
               }
 
-              double N = target_dist*2.24/(.02*car_speed);
+              double N = target_dist*MS_TO_MPH/(TIME_INTERVAL*car_speed);
               double x_point = x_start+(target_x)/N;
               double y_point = s(x_point);
 
