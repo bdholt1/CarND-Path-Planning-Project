@@ -12,6 +12,17 @@ Each waypoint in the list contains  [x,y,s,dx,dy] values. x and y are the waypoi
 
 The highway's waypoints loop around so the frenet s value, distance along the road, goes from 0 to 6945.554.
 
+## Reflections
+In this project a vehicle navigates around a track that is described by a set of waypoints.  The goal is to drive around the track as fast as possible while observing the 50MPH speed limit. The car should also not exceed the maximum tangential and normal acceleration limits of 10m/s^2 or the maximum jerk limit of 50m/s^3. Equally importantly the car should not have any collisions with other vehicles on the track.
+
+The simulator runs at 50Hz which means that every 20ms the control software is provided with information about the vehicle's status (position, speed etc) and the status of other vehicles on the road after a simulated sensor fusion process.
+
+At it's most basic the vehicle can complete a lap of the track by simply following the waypoints provided
+
+The car makes use of [Frenet coordinates (https://en.wikipedia.org/wiki/Frenet%E2%80%93Serret_formulas)] to follow the waypoints.  
+
+A video of the car navigating the track can be found [here (https://www.youtube.com/watch?v=-wqgDM5fidQ)].
+
 ## Basic Build Instructions
 
 1. Clone this repo.
